@@ -1,14 +1,14 @@
 import { Router, Request, Response } from 'express';
-// import { trace } from '@opentelemetry/api';
+import { trace } from '@opentelemetry/api';
 import { getTaskById, updateTask, deleteTask } from '../store';
 
 const router = Router();
-// const tracer = trace.getTracer('projectops-api');
+const tracer = trace.getTracer('project-ops-api');
 
 // PATCH /api/tasks/:id
 router.patch('/:id', (req: Request, res: Response) => {
-  // const span = tracer.startSpan('tasks.update');
-  // span.setAttribute('task.id', req.params.id);
+  const span = tracer.startSpan('tasks.update');
+  span.setAttribute('task.id', req.params.id);
   try {
     const existing = getTaskById(req.params.id);
     if (!existing) {
@@ -16,17 +16,17 @@ router.patch('/:id', (req: Request, res: Response) => {
       return;
     }
     const updated = updateTask(req.params.id, req.body);
-    // if (updated?.status) span.setAttribute('task.status', updated.status);
+    if (updated?.status) span.setAttribute('task.status', updated.status);
     res.json(updated);
   } finally {
-    // span.end();
+    span.end();
   }
 });
 
 // DELETE /api/tasks/:id
 router.delete('/:id', (req: Request, res: Response) => {
-  // const span = tracer.startSpan('tasks.delete');
-  // span.setAttribute('task.id', req.params.id);
+  const span = tracer.startSpan('tasks.delete');
+  span.setAttribute('task.id', req.params.id);
   try {
     const deleted = deleteTask(req.params.id);
     if (!deleted) {
@@ -35,7 +35,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     }
     res.status(204).send();
   } finally {
-    // span.end();
+    span.end();
   }
 });
 

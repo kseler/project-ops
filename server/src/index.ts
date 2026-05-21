@@ -1,5 +1,5 @@
 import 'dotenv/config';
-// import './telemetry';
+import './telemetry';
 
 import express from 'express';
 import cors from 'cors';
@@ -17,9 +17,9 @@ app.use('/api/projects', projectsRouter);
 app.use('/api', tasklistsRouter);
 app.use('/api/tasks', tasksRouter);
 
-// app.get('/health', (_req, res) => {
-//   res.json({ status: 'ok', timestamp: new Date().toISOString() });
-// });
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 app.listen(PORT, () => {
   console.log(`[server] Running at http://localhost:${PORT}`);

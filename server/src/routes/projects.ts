@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-// import { trace } from '@opentelemetry/api';
+import { trace } from '@opentelemetry/api';
 import {
   getProjects,
   getProjectById,
@@ -9,11 +9,11 @@ import {
 } from '../store';
 
 const router = Router();
-// const tracer = trace.getTracer('projectops-api');
+const tracer = trace.getTracer('project-ops-api');
 
 // GET /api/projects
 router.get('/', (_req: Request, res: Response) => {
-  // const span = tracer.startSpan('projects.list');
+  const span = tracer.startSpan('projects.list');
   try {
     const projects = getProjects();
     // Enrich each project with task counts
@@ -26,21 +26,21 @@ router.get('/', (_req: Request, res: Response) => {
         completedCount: allTasks.filter((t) => t.status === 'done').length,
       };
     });
-    // span.setAttribute('projects.count', enriched.length);
+    span.setAttribute('projects.count', enriched.length);
     res.json(enriched);
   } finally {
-    // span.end();
+    span.end();
   }
 });
 
 // GET /api/projects/:id
 router.get('/:id', (req: Request, res: Response) => {
-  // const span = tracer.startSpan('projects.get');
-  // span.setAttribute('project.id', req.params.id);
+  const span = tracer.startSpan('projects.get');
+  span.setAttribute('project.id', req.params.id);
   try {
     const project = getProjectById(req.params.id);
     if (!project) {
-      // span.setAttribute('error', true);
+      span.setAttribute('error', true);
       res.status(404).json({ error: 'Project not found' });
       return;
     }
@@ -52,13 +52,13 @@ router.get('/:id', (req: Request, res: Response) => {
       completedCount: allTasks.filter((t) => t.status === 'done').length,
     });
   } finally {
-    // span.end();
+    span.end();
   }
 });
 
 // POST /api/projects
 router.post('/', (req: Request, res: Response) => {
-  // const span = tracer.startSpan('projects.create');
+  const span = tracer.startSpan('projects.create');
   try {
     const { name, description, status, dueDate } = req.body;
     if (!name || !dueDate) {
@@ -71,17 +71,17 @@ router.post('/', (req: Request, res: Response) => {
       status: status ?? 'active',
       dueDate,
     });
-    // span.setAttribute('project.id', project.id);
+    span.setAttribute('project.id', project.id);
     res.status(201).json(project);
   } finally {
-    // span.end();
+    span.end();
   }
 });
 
 // GET /api/projects/:id/tasklists
 router.get('/:id/tasklists', (req: Request, res: Response) => {
-  // const span = tracer.startSpan('projects.tasklists');
-  // span.setAttribute('project.id', req.params.id);
+  const span = tracer.startSpan('projects.tasklists');
+  span.setAttribute('project.id', req.params.id);
   try {
     const project = getProjectById(req.params.id);
     if (!project) {
@@ -93,10 +93,10 @@ router.get('/:id/tasklists', (req: Request, res: Response) => {
       ...tl,
       tasks: getTasksByTaskList(tl.id),
     }));
-    // span.setAttribute('tasklists.count', enriched.length);
+    span.setAttribute('tasklists.count', enriched.length);
     res.json(enriched);
   } finally {
-    // span.end();
+    span.end();
   }
 });
 
