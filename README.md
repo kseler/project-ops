@@ -1,75 +1,123 @@
-# React + TypeScript + Vite
+# ProjectOps
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack project and task management app for tracking work across teams. Organize projects into task lists, monitor progress in real time, and visualize timelines with a built-in Gantt view.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **Dashboard** — At-a-glance stats and charts: task status breakdown, completion trends, per-project progress, and open tasks by priority
+- **Projects** — Create and manage projects with status tracking (Active, On Hold, Completed)
+- **Task Lists** — Group tasks within a project into named lists
+- **Tasks** — Track individual work items with priority levels, status, and assignees
+- **List View** — Kanban-style columns organized by task status
+- **Gantt View** — Timeline visualization of tasks across a project
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+---
 
-Note: This will impact Vite dev & build performances.
+## Tech Stack
 
-## Expanding the ESLint configuration
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, TypeScript, Vite, React Router 7 |
+| State | Zustand |
+| Styling | Tailwind CSS |
+| Charts | Recharts |
+| Backend | Express 5, Node.js, TypeScript |
+| Observability | OpenTelemetry (OTLP) |
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Prerequisites
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+- Node.js 18+
+- npm 8+
+
+### Installation
+
+```bash
+git clone <repo-url>
+cd project-ops
+
+# Install root + client dependencies
+npm install
+
+# Install server dependencies
+cd server && npm install && cd ..
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Running in Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x';
-import reactDom from 'eslint-plugin-react-dom';
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+```bash
+npm run dev
 ```
+
+This starts both the Vite dev server and the Express API concurrently:
+
+| Service | URL |
+|---|---|
+| Client | http://localhost:5173 |
+| API | http://localhost:3001 |
+
+---
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start client + server together |
+| `npm run dev:client` | Start Vite dev server only |
+| `npm run dev:server` | Start Express server only (with watch) |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | Run ESLint |
+| `npm run lint:fix` | Auto-fix lint issues |
+| `npm run format` | Format code with Prettier |
+
+---
+
+## API Overview
+
+```
+GET    /health
+GET    /api/projects
+POST   /api/projects
+GET    /api/projects/:id
+GET    /api/projects/:id/tasklists
+POST   /api/projects/:id/tasklists
+POST   /api/tasklists/:id/tasks
+PATCH  /api/tasks/:id
+DELETE /api/tasks/:id
+```
+
+---
+
+## Project Structure
+
+```
+project-ops/
+├── src/                    # React frontend
+│   ├── pages/              # Dashboard, Projects, ProjectDetail
+│   ├── components/         # Layout, cards, view components
+│   ├── lib/
+│   │   ├── api.ts          # API client
+│   │   ├── store.ts        # Zustand store
+│   │   └── types.ts        # Shared TypeScript types
+│   └── App.tsx             # Route definitions
+└── server/
+    └── src/
+        ├── routes/         # projects, task-lists, tasks
+        ├── store.ts        # In-memory data store
+        ├── telemetry.ts    # OpenTelemetry setup
+        └── index.ts        # Express entry point
+```
+
+---
+
+## Notes
+
+- The backend uses **in-memory storage** — data resets on server restart. The store is seeded with sample projects on startup, making it easy to explore the app without any setup.
+- The server port defaults to `3001` and is configurable via the `PORT` environment variable.
+- OpenTelemetry tracing is enabled by default; configure the OTLP endpoint via environment variables to export traces to your collector.
