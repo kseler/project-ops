@@ -14,6 +14,8 @@ export function TaskListView({ taskList, onTasksChange }: Props) {
   const [tasks, setTasks] = useState<Task[]>(taskList.tasks);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newStartDate, setNewStartDate] = useState('');
+  const [newDueDate, setNewDueDate] = useState('');
   const [busy, setBusy] = useState(false);
 
   const update = (updated: Task[]) => {
@@ -25,13 +27,23 @@ export function TaskListView({ taskList, onTasksChange }: Props) {
     if (!newName.trim() || busy) return;
     setBusy(true);
     try {
-      const task = await createTask(taskList.id, { name: newName.trim() });
+      const task = await createTask(taskList.id, {
+        name: newName.trim(),
+        startDate: newStartDate || undefined,
+        dueDate: newDueDate || undefined,
+      });
       update([...tasks, task]);
-      setNewName('');
-      setAdding(false);
+      resetForm();
     } finally {
       setBusy(false);
     }
+  };
+
+  const resetForm = () => {
+    setAdding(false);
+    setNewName('');
+    setNewStartDate('');
+    setNewDueDate('');
   };
 
   const handleUpdate = (updated: Task) =>
@@ -74,24 +86,44 @@ export function TaskListView({ taskList, onTasksChange }: Props) {
         ))}
       </div>
 
-      {/* Add task inline */}
       {adding && (
-        <div className="px-3 py-2 border-t border-slate-100">
+        <div className="px-3 py-2 border-t border-slate-100 space-y-2">
           <input
             autoFocus
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleAdd();
-              if (e.key === 'Escape') {
-                setAdding(false);
-                setNewName('');
-              }
+              if (e.key === 'Escape') resetForm();
             }}
             placeholder="Task name…"
             className="w-full text-sm px-2 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
           />
-          <div className="flex gap-2 mt-2">
+
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            <label className="flex items-center gap-1.5 text-xs text-slate-500">
+              Start
+              <input
+                type="date"
+                value={newStartDate}
+                max={newDueDate || undefined}
+                onChange={(e) => setNewStartDate(e.target.value)}
+                className="text-sm px-1.5 py-0.5 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 text-slate-700"
+              />
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-slate-500">
+              Due
+              <input
+                type="date"
+                value={newDueDate}
+                min={newStartDate || undefined}
+                onChange={(e) => setNewDueDate(e.target.value)}
+                className="text-sm px-1.5 py-0.5 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 text-slate-700"
+              />
+            </label>
+          </div>
+
+          <div className="flex gap-2">
             <button
               onClick={handleAdd}
               disabled={busy}
@@ -100,10 +132,7 @@ export function TaskListView({ taskList, onTasksChange }: Props) {
               Add
             </button>
             <button
-              onClick={() => {
-                setAdding(false);
-                setNewName('');
-              }}
+              onClick={resetForm}
               className="text-xs px-3 py-1 text-slate-500 hover:text-slate-700"
             >
               Cancel

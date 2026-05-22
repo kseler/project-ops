@@ -12,6 +12,8 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   assignee?: string;
+  startDate?: string;
+  dueDate?: string;
   createdAt: string;
   completedAt?: string;
 }
@@ -117,6 +119,8 @@ export let tasks: Task[] = [
     status: 'in-progress',
     priority: 'high',
     assignee: 'karlo',
+    startDate: daysAgo(20).slice(0, 10),
+    dueDate: daysFromNow(5).slice(0, 10),
     createdAt: daysAgo(20),
   },
   {
@@ -125,6 +129,7 @@ export let tasks: Task[] = [
     name: 'Write integration tests',
     status: 'todo',
     priority: 'medium',
+    dueDate: daysFromNow(10).slice(0, 10),
     createdAt: daysAgo(18),
   },
   {
@@ -134,6 +139,7 @@ export let tasks: Task[] = [
     status: 'done',
     priority: 'low',
     assignee: 'karlo',
+    dueDate: daysAgo(14).slice(0, 10),
     createdAt: daysAgo(25),
     completedAt: daysAgo(14),
   },
@@ -145,6 +151,8 @@ export let tasks: Task[] = [
     name: 'Add authentication middleware',
     status: 'todo',
     priority: 'high',
+    startDate: daysFromNow(2).slice(0, 10),
+    dueDate: daysFromNow(9).slice(0, 10),
     createdAt: daysAgo(10),
   },
   {
@@ -153,6 +161,7 @@ export let tasks: Task[] = [
     name: 'Performance benchmarking',
     status: 'todo',
     priority: 'medium',
+    dueDate: daysFromNow(14).slice(0, 10),
     createdAt: daysAgo(8),
   },
   {
@@ -161,6 +170,8 @@ export let tasks: Task[] = [
     name: 'Load test at 10k RPS',
     status: 'todo',
     priority: 'medium',
+    startDate: daysFromNow(10).slice(0, 10),
+    dueDate: daysFromNow(18).slice(0, 10),
     createdAt: daysAgo(6),
   },
 

@@ -41,7 +41,7 @@ export const createTaskList = (projectId: string, name: string) =>
 
 export const createTask = (
   taskListId: string,
-  data: { name: string; priority?: string; description?: string },
+  data: { name: string; priority?: string; description?: string; startDate?: string; dueDate?: string },
 ) =>
   request<Task>(`/tasklists/${taskListId}/tasks`, {
     method: 'POST',

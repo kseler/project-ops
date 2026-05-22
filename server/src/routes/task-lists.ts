@@ -38,7 +38,7 @@ router.post('/tasklists/:taskListId/tasks', (req: Request, res: Response) => {
       res.status(404).json({ error: 'Task list not found' });
       return;
     }
-    const { name, description, priority, assignee } = req.body;
+    const { name, description, priority, assignee, startDate, dueDate } = req.body;
     if (!name) {
       res.status(400).json({ error: 'name is required' });
       return;
@@ -50,6 +50,8 @@ router.post('/tasklists/:taskListId/tasks', (req: Request, res: Response) => {
       status: 'todo',
       priority: priority ?? 'medium',
       assignee,
+      startDate: startDate ?? undefined,
+      dueDate: dueDate ?? undefined,
     });
     span.setAttribute('task.id', task.id);
     res.status(201).json(task);
