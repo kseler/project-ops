@@ -192,7 +192,7 @@ export function ProjectGanttView({ taskLists }: Props) {
           </div>
 
           <div
-            className="absolute inset-x-0 bg-slate-50"
+            className="absolute inset-x-0 bg-slate-50 border-b border-slate-200"
             style={{ top: MONTH_ROW_HEIGHT, height: DAY_ROW_HEIGHT }}
           >
             <div
