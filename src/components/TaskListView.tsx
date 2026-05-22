@@ -2,26 +2,21 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { createTask } from '../lib/api';
-import type { Task, TaskList } from '../lib/types';
+import { useProjectDetail } from '../lib/store';
+import type { TaskList } from '../lib/types';
 import { TaskItem } from './TaskItem';
 
 interface Props {
   taskList: TaskList;
-  onTasksChange: (taskListId: string, tasks: Task[]) => void;
 }
 
-export function TaskListView({ taskList, onTasksChange }: Props) {
-  const [tasks, setTasks] = useState<Task[]>(taskList.tasks);
+export function TaskListView({ taskList }: Props) {
+  const { addTask } = useProjectDetail();
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newStartDate, setNewStartDate] = useState('');
   const [newDueDate, setNewDueDate] = useState('');
   const [busy, setBusy] = useState(false);
-
-  const update = (updated: Task[]) => {
-    setTasks(updated);
-    onTasksChange(taskList.id, updated);
-  };
 
   const handleAdd = async () => {
     if (!newName.trim() || busy) return;
@@ -32,7 +27,7 @@ export function TaskListView({ taskList, onTasksChange }: Props) {
         startDate: newStartDate || undefined,
         dueDate: newDueDate || undefined,
       });
-      update([...tasks, task]);
+      addTask(taskList.id, task);
       resetForm();
     } finally {
       setBusy(false);
@@ -46,12 +41,7 @@ export function TaskListView({ taskList, onTasksChange }: Props) {
     setNewDueDate('');
   };
 
-  const handleUpdate = (updated: Task) =>
-    update(tasks.map((t) => (t.id === updated.id ? updated : t)));
-
-  const handleDelete = (id: string) => update(tasks.filter((t) => t.id !== id));
-
-  const done = tasks.filter((t) => t.status === 'done').length;
+  const done = taskList.tasks.filter((t) => t.status === 'done').length;
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -60,7 +50,7 @@ export function TaskListView({ taskList, onTasksChange }: Props) {
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-800">{taskList.name}</h3>
           <span className="text-xs text-slate-400">
-            {done}/{tasks.length}
+            {done}/{taskList.tasks.length}
           </span>
         </div>
         <button
@@ -73,16 +63,11 @@ export function TaskListView({ taskList, onTasksChange }: Props) {
 
       {/* Tasks */}
       <div className="divide-y divide-slate-50">
-        {tasks.length === 0 && !adding && (
+        {taskList.tasks.length === 0 && !adding && (
           <p className="px-4 py-4 text-xs text-slate-400">No tasks yet.</p>
         )}
-        {tasks.map((task) => (
-          <TaskItem
-            key={task.id}
-            task={task}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
-          />
+        {taskList.tasks.map((task) => (
+          <TaskItem key={task.id} task={task} />
         ))}
       </div>
 

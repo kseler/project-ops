@@ -10,6 +10,7 @@ import {
   SEGMENT_WIDTH,
   toISO,
 } from '../lib/ganttUtils';
+import { useProjectDetail } from '../lib/store';
 import type { Task, TaskList } from '../lib/types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -46,11 +47,8 @@ function entryClass(task: Task, todayStr: string): string {
   return 'bg-indigo-300 text-indigo-900';
 }
 
-interface Props {
-  taskLists: TaskList[];
-}
-
-export function ProjectGanttView({ taskLists }: Props) {
+export function ProjectGanttView() {
+  const { taskLists } = useProjectDetail();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayStr = toISO(today);

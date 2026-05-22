@@ -4,8 +4,8 @@ import { Link, useParams } from 'react-router-dom';
 
 import { ProjectGanttView } from '../components/ProjectGanttView';
 import { ProjectListView } from '../components/ProjectListView';
-import { getProject, getTaskLists } from '../lib/api';
-import type { Project, Task, TaskList } from '../lib/types';
+import { useProjectDetail } from '../lib/store';
+import type { Project } from '../lib/types';
 
 type View = 'list' | 'gantt';
 
@@ -22,29 +22,14 @@ const views: { id: View; label: string; icon: React.ReactNode }[] = [
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
-  const [project, setProject] = useState<Project | null>(null);
-  const [taskLists, setTaskLists] = useState<TaskList[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { project, taskLists, loading, error, fetchProject, reset } = useProjectDetail();
   const [view, setView] = useState<View>('list');
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([getProject(id), getTaskLists(id)])
-      .then(([proj, lists]) => {
-        setProject(proj);
-        setTaskLists(lists);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  const handleTaskListAdded = (list: TaskList) => setTaskLists((prev) => [...prev, list]);
-
-  const handleTasksChange = (taskListId: string, tasks: Task[]) =>
-    setTaskLists((prev) =>
-      prev.map((tl) => (tl.id === taskListId ? { ...tl, tasks } : tl)),
-    );
+    fetchProject(id);
+    return reset;
+  }, [id, fetchProject, reset]);
 
   if (loading) return <div className="p-8 text-sm text-slate-400">Loading…</div>;
   if (error) return <div className="p-8 text-sm text-red-400">{error}</div>;
@@ -107,15 +92,8 @@ export function ProjectDetail() {
         ))}
       </div>
 
-      {view === 'list' && (
-        <ProjectListView
-          projectId={id!}
-          taskLists={taskLists}
-          onTaskListAdded={handleTaskListAdded}
-          onTasksChange={handleTasksChange}
-        />
-      )}
-      {view === 'gantt' && <ProjectGanttView taskLists={taskLists} />}
+      {view === 'list' && <ProjectListView projectId={id!} />}
+      {view === 'gantt' && <ProjectGanttView />}
     </div>
   );
 }

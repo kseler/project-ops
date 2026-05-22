@@ -2,6 +2,7 @@ import { Calendar, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { deleteTask, updateTask } from '../lib/api';
+import { useProjectDetail } from '../lib/store';
 import type { Task } from '../lib/types';
 
 const priorityDot: Record<Task['priority'], string> = {
@@ -37,11 +38,10 @@ function isOverdue(dueDate: string, status: Task['status']): boolean {
 
 interface Props {
   task: Task;
-  onUpdate: (updated: Task) => void;
-  onDelete: (id: string) => void;
 }
 
-export function TaskItem({ task, onUpdate, onDelete }: Props) {
+export function TaskItem({ task }: Props) {
+  const { patchTask, removeTask } = useProjectDetail();
   const [busy, setBusy] = useState(false);
   const [editingDates, setEditingDates] = useState(false);
   const [startDate, setStartDate] = useState(task.startDate ?? '');
@@ -58,7 +58,7 @@ export function TaskItem({ task, onUpdate, onDelete }: Props) {
             ? 'done'
             : 'todo';
       const updated = await updateTask(task.id, { status: nextStatus });
-      onUpdate(updated);
+      patchTask(updated);
     } finally {
       setBusy(false);
     }
@@ -69,7 +69,7 @@ export function TaskItem({ task, onUpdate, onDelete }: Props) {
     setBusy(true);
     try {
       await deleteTask(task.id);
-      onDelete(task.id);
+      removeTask(task.taskListId, task.id);
     } catch {
       setBusy(false);
     }
@@ -91,7 +91,7 @@ export function TaskItem({ task, onUpdate, onDelete }: Props) {
         startDate: nextStart,
         dueDate: nextDue,
       });
-      onUpdate(updated);
+      patchTask(updated);
     } catch {
       /* ignore */
     }

@@ -2,17 +2,15 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { createTaskList } from '../lib/api';
-import type { Task, TaskList } from '../lib/types';
+import { useProjectDetail } from '../lib/store';
 import { TaskListView } from './TaskListView';
 
 interface Props {
   projectId: string;
-  taskLists: TaskList[];
-  onTaskListAdded: (list: TaskList) => void;
-  onTasksChange: (taskListId: string, tasks: Task[]) => void;
 }
 
-export function ProjectListView({ projectId, taskLists, onTaskListAdded, onTasksChange }: Props) {
+export function ProjectListView({ projectId }: Props) {
+  const { taskLists, addTaskList } = useProjectDetail();
   const [addingList, setAddingList] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -22,7 +20,7 @@ export function ProjectListView({ projectId, taskLists, onTaskListAdded, onTasks
     setBusy(true);
     try {
       const list = await createTaskList(projectId, newListName.trim());
-      onTaskListAdded(list);
+      addTaskList(list);
       setNewListName('');
       setAddingList(false);
     } finally {
@@ -38,7 +36,7 @@ export function ProjectListView({ projectId, taskLists, onTaskListAdded, onTasks
   return (
     <div className="space-y-4">
       {taskLists.map((tl) => (
-        <TaskListView key={tl.id} taskList={tl} onTasksChange={onTasksChange} />
+        <TaskListView key={tl.id} taskList={tl} />
       ))}
 
       <div>
