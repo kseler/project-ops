@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import './telemetry';
 
 import express from 'express';
 import cors from 'cors';

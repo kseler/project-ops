@@ -7,8 +7,6 @@ const tracer = trace.getTracer('project-ops-api');
 
 // PATCH /api/tasks/:id
 router.patch('/:id', (req: Request, res: Response) => {
-  const span = tracer.startSpan('tasks.update');
-  span.setAttribute('task.id', req.params.id);
   try {
     const existing = getTaskById(req.params.id);
     if (!existing) {
@@ -16,17 +14,14 @@ router.patch('/:id', (req: Request, res: Response) => {
       return;
     }
     const updated = updateTask(req.params.id, req.body);
-    if (updated?.status) span.setAttribute('task.status', updated.status);
     res.json(updated);
-  } finally {
-    span.end();
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
 // DELETE /api/tasks/:id
 router.delete('/:id', (req: Request, res: Response) => {
-  const span = tracer.startSpan('tasks.delete');
-  span.setAttribute('task.id', req.params.id);
   try {
     const deleted = deleteTask(req.params.id);
     if (!deleted) {
@@ -34,8 +29,8 @@ router.delete('/:id', (req: Request, res: Response) => {
       return;
     }
     res.status(204).send();
-  } finally {
-    span.end();
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
