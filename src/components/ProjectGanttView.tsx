@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 import {
@@ -21,7 +21,8 @@ const DAY_ROW_HEIGHT = 22;
 const DATE_HEADER_HEIGHT = MONTH_ROW_HEIGHT + DAY_ROW_HEIGHT;
 const INITIAL_BUFFER_DAYS = 180;
 const EXTEND_DAYS = 90;
-const SCROLL_THRESHOLD = 400; // px from edge before extending the render range
+const SCROLL_THRESHOLD = 400;
+const DAY_BUFFER = 30; // extra days rendered outside the visible viewport on each side
 
 const MONTHS = [
   'Jan',
@@ -49,9 +50,14 @@ function entryClass(task: Task, todayStr: string): string {
 
 export function ProjectGanttView() {
   const { taskLists } = useProjectDetail();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = toISO(today);
+
+  // Computed once on mount — today doesn't change during a session
+  const today = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
+  const todayStr = useMemo(() => toISO(today), [today]);
 
   const [renderStart, setRenderStart] = useState(() =>
     addDays(today, -INITIAL_BUFFER_DAYS),
@@ -61,81 +67,158 @@ export function ProjectGanttView() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const adjusting = useRef(false);
 
-  // Flat row list — mirrors left panel rows 1:1 with timeline rows
-  const rows: Row[] = taskLists.flatMap((tl) => [
-    { kind: 'header' as const, taskList: tl },
-    ...tl.tasks.map((task) => ({ kind: 'task' as const, task })),
-  ]);
+  // Recomputes only when taskLists reference changes (task mutations in the store)
+  const rows = useMemo<Row[]>(
+    () =>
+      taskLists.flatMap((tl) => [
+        { kind: 'header' as const, taskList: tl },
+        ...tl.tasks.map((task) => ({ kind: 'task' as const, task })),
+      ]),
+    [taskLists],
+  );
 
-  const totalDays = daysBetween(renderStart, renderEnd);
+  // Recomputes only when render range changes (infinite scroll extensions)
+  const totalDays = useMemo(
+    () => daysBetween(renderStart, renderEnd),
+    [renderStart, renderEnd],
+  );
   const timelineWidth = totalDays * SEGMENT_WIDTH;
   const timelineHeight = rows.length * SEGMENT_HEIGHT;
-  const todayLeft = daysBetween(renderStart, today) * SEGMENT_WIDTH;
 
-  // On mount: center today in the viewport
+  const todayDayIndex = useMemo(
+    () => daysBetween(renderStart, today),
+    [renderStart, today],
+  );
+  const todayLeft = todayDayIndex * SEGMENT_WIDTH;
+
+  // Expose to handleScroll via ref so the callback needs zero deps
+  const totalDaysRef = useRef(totalDays);
+  totalDaysRef.current = totalDays;
+
+  // ── Month segments ─────────────────────────────────────────────────────────
+  // Recomputes only on render range changes — O(totalDays) loop stays out of task updates
+  const monthSegments = useMemo(() => {
+    const segments: { left: number; width: number; label: string }[] = [];
+    let segStart = 0;
+    for (let day = 1; day <= totalDays; day++) {
+      const prev = addDays(renderStart, day - 1);
+      const curr = day < totalDays ? addDays(renderStart, day) : null;
+      const changed =
+        !curr ||
+        curr.getMonth() !== prev.getMonth() ||
+        curr.getFullYear() !== prev.getFullYear();
+      if (changed) {
+        segments.push({
+          left: segStart * SEGMENT_WIDTH,
+          width: (day - segStart) * SEGMENT_WIDTH,
+          label: `${MONTHS[prev.getMonth()]} ${prev.getFullYear()}`,
+        });
+        segStart = day;
+      }
+    }
+    return segments;
+  }, [renderStart, totalDays]);
+
+  // ── Day labels — full dataset, rendering is windowed below ─────────────────
+  const dayLabels = useMemo(() => {
+    const labels: { left: number; label: string; isToday: boolean }[] = [];
+    for (let day = 0; day < totalDays; day++) {
+      labels.push({
+        left: day * SEGMENT_WIDTH,
+        label: String(addDays(renderStart, day).getDate()),
+        isToday: day === todayDayIndex,
+      });
+    }
+    return labels;
+  }, [renderStart, totalDays, todayDayIndex]);
+
+  // ── Grid style ─────────────────────────────────────────────────────────────
+  const gridStyle = useMemo(
+    () => getTimelineGridStyle(totalDays, rows.length),
+    [totalDays, rows.length],
+  );
+
+  // ── Virtual window for day cells ───────────────────────────────────────────
+  // Stored as pixel offsets in timeline coordinates (relative to renderStart).
+  // Hysteresis: state only updates when the viewport scrolls outside the buffered
+  // window, keeping re-renders to ~1 per DAY_BUFFER days of scrolling.
+  const [visiblePxRange, setVisiblePxRange] = useState<[number, number]>(() => {
+    const centerPx = INITIAL_BUFFER_DAYS * SEGMENT_WIDTH;
+    const approxViewportPx = 60 * SEGMENT_WIDTH; // safe fallback before layout
+    return [
+      Math.max(0, centerPx - approxViewportPx / 2 - DAY_BUFFER * SEGMENT_WIDTH),
+      centerPx + approxViewportPx / 2 + DAY_BUFFER * SEGMENT_WIDTH,
+    ];
+  });
+
+  // Only the day cells within the visible window are rendered
+  const visibleDayLabels = useMemo(
+    () =>
+      dayLabels.filter((d) => d.left >= visiblePxRange[0] && d.left <= visiblePxRange[1]),
+    [dayLabels, visiblePxRange],
+  );
+
+  // ── Initial scroll ─────────────────────────────────────────────────────────
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollLeft = todayLeft - el.clientWidth / 2;
+    // Refine visible range now that we know the real viewport width
+    setVisiblePxRange([
+      Math.max(0, el.scrollLeft - DAY_BUFFER * SEGMENT_WIDTH),
+      el.scrollLeft + el.clientWidth + DAY_BUFFER * SEGMENT_WIDTH,
+    ]);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleScroll = () => {
+  // ── Scroll handler ─────────────────────────────────────────────────────────
+  // Zero deps: reads only refs and module constants; state updates via stable setters.
+  const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el || adjusting.current) return;
 
-    // Near left edge → extend rendering range to the left, compensate scrollLeft
+    // Near left edge — extend left and compensate scrollLeft
     if (el.scrollLeft < SCROLL_THRESHOLD) {
       adjusting.current = true;
       flushSync(() => setRenderStart((prev) => addDays(prev, -EXTEND_DAYS)));
       el.scrollLeft += EXTEND_DAYS * SEGMENT_WIDTH;
+      // Sync visible range with the new scroll position immediately — without
+      // this, visiblePxRange would refer to the old coordinate space until the
+      // next scroll event, leaving the day row blank.
+      setVisiblePxRange([
+        Math.max(0, el.scrollLeft - DAY_BUFFER * SEGMENT_WIDTH),
+        el.scrollLeft + el.clientWidth + DAY_BUFFER * SEGMENT_WIDTH,
+      ]);
       requestAnimationFrame(() => {
         adjusting.current = false;
       });
       return;
     }
 
-    // Near right edge → extend rendering range to the right
+    // Near right edge — extend right (no scroll compensation needed)
     if (el.scrollLeft + el.clientWidth > el.scrollWidth - SCROLL_THRESHOLD) {
       setRenderEnd((prev) => addDays(prev, EXTEND_DAYS));
     }
-  };
 
-  // Month row: one segment per calendar month
-  const monthSegments: { left: number; width: number; label: string }[] = [];
-  let segStart = 0;
-  for (let day = 1; day <= totalDays; day++) {
-    const prev = addDays(renderStart, day - 1);
-    const curr = day < totalDays ? addDays(renderStart, day) : null;
-    const monthChanged =
-      !curr ||
-      curr.getMonth() !== prev.getMonth() ||
-      curr.getFullYear() !== prev.getFullYear();
-    if (monthChanged) {
-      monthSegments.push({
-        left: segStart * SEGMENT_WIDTH,
-        width: (day - segStart) * SEGMENT_WIDTH,
-        label: `${MONTHS[prev.getMonth()]} ${prev.getFullYear()}`,
-      });
-      segStart = day;
-    }
-  }
-
-  // Day row: one cell per day
-  const todayDayIndex = daysBetween(renderStart, today);
-  const dayLabels: { left: number; label: string; isToday: boolean }[] = [];
-  for (let day = 0; day < totalDays; day++) {
-    dayLabels.push({
-      left: day * SEGMENT_WIDTH,
-      label: String(addDays(renderStart, day).getDate()),
-      isToday: day === todayDayIndex,
+    // Update virtual window with hysteresis:
+    // only re-render day cells when the viewport drifts outside the buffered range
+    const { scrollLeft, clientWidth } = el;
+    setVisiblePxRange((prev) => {
+      if (scrollLeft >= prev[0] && scrollLeft + clientWidth <= prev[1]) return prev; // bail out
+      return [
+        Math.max(0, scrollLeft - DAY_BUFFER * SEGMENT_WIDTH),
+        Math.min(
+          totalDaysRef.current * SEGMENT_WIDTH,
+          scrollLeft + clientWidth + DAY_BUFFER * SEGMENT_WIDTH,
+        ),
+      ];
     });
-  }
+  }, []); // stable across renders
 
-  const gridStyle = getTimelineGridStyle(totalDays, rows.length);
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex border border-slate-200 rounded-lg overflow-hidden bg-white">
-      {/* Table */}
+      {/* ── Left panel ───────────────────────────────────────────────────────── */}
       <div
         style={{ width: LEFT_PANEL_WIDTH }}
         className="shrink-0 border-r border-slate-200 bg-white z-10"
@@ -144,7 +227,6 @@ export function ProjectGanttView() {
           style={{ height: DATE_HEADER_HEIGHT }}
           className="border-b border-slate-200 bg-slate-50"
         />
-
         {rows.map((row, i) => (
           <div
             key={i}
@@ -166,12 +248,14 @@ export function ProjectGanttView() {
         ))}
       </div>
 
-      {/* Timeline */}
+      {/* ── Timeline ─────────────────────────────────────────────────────────── */}
       <div ref={scrollRef} className="flex-1 overflow-x-auto" onScroll={handleScroll}>
+        {/* Date header */}
         <div
           className="relative border-b border-slate-200"
           style={{ width: timelineWidth, height: DATE_HEADER_HEIGHT }}
         >
+          {/* Month row */}
           <div
             className="absolute inset-x-0 top-0 bg-slate-100 border-b border-slate-200"
             style={{ height: MONTH_ROW_HEIGHT }}
@@ -189,6 +273,7 @@ export function ProjectGanttView() {
             ))}
           </div>
 
+          {/* Day row — only visible window rendered */}
           <div
             className="absolute inset-x-0 bg-slate-50 border-b border-slate-200"
             style={{ top: MONTH_ROW_HEIGHT, height: DAY_ROW_HEIGHT }}
@@ -197,16 +282,14 @@ export function ProjectGanttView() {
               className="absolute inset-y-0 bg-indigo-100"
               style={{ left: todayLeft, width: SEGMENT_WIDTH }}
             />
-            {dayLabels.map(({ left, label, isToday }) => (
+            {visibleDayLabels.map(({ left, label, isToday }) => (
               <div
                 key={left}
                 className="absolute inset-y-0 flex items-center justify-center border-r border-slate-100"
                 style={{ left, width: SEGMENT_WIDTH }}
               >
                 <span
-                  className={`text-xs leading-none ${
-                    isToday ? 'font-bold text-indigo-600' : 'text-slate-400'
-                  }`}
+                  className={`text-xs leading-none ${isToday ? 'font-bold text-indigo-600' : 'text-slate-400'}`}
                 >
                   {label}
                 </span>
@@ -217,6 +300,7 @@ export function ProjectGanttView() {
 
         {/* Grid */}
         <div style={gridStyle}>
+          {/* Today column tint */}
           <div
             className="absolute top-0 bg-indigo-50 pointer-events-none"
             style={{
@@ -236,7 +320,7 @@ export function ProjectGanttView() {
             }}
           />
 
-          {/* Header row backgrounds (rendered before entries so entries sit on top) */}
+          {/* Header row backgrounds */}
           {rows.map((row, i) =>
             row.kind === 'header' ? (
               <div
