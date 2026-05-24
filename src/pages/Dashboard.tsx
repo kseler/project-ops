@@ -5,7 +5,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Legend,
   Pie,
   PieChart,
@@ -32,9 +31,9 @@ function buildStatusData(projects: Project[]) {
     todo += remaining - Math.floor(remaining * 0.4);
   }
   return [
-    { name: 'Done', value: done },
-    { name: 'In progress', value: inProgress },
-    { name: 'To do', value: todo },
+    { name: 'Done', value: done, fill: STATUS_COLORS[0] },
+    { name: 'In progress', value: inProgress, fill: STATUS_COLORS[1] },
+    { name: 'To do', value: todo, fill: STATUS_COLORS[2] },
   ];
 }
 
@@ -66,9 +65,9 @@ function buildProgressData(projects: Project[]) {
 
 function buildPriorityData() {
   return [
-    { priority: 'High', count: 9 },
-    { priority: 'Medium', count: 12 },
-    { priority: 'Low', count: 5 },
+    { priority: 'High', count: 9, fill: '#f87171' },
+    { priority: 'Medium', count: 12, fill: '#f59e0b' },
+    { priority: 'Low', count: 5, fill: '#94a3b8' },
   ];
 }
 
@@ -161,20 +160,15 @@ export function Dashboard() {
       <div className="grid grid-cols-2 gap-5">
         <ChartCard title="Tasks by status">
           <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
+            <PieChart data={statusData}>
               <Pie
-                data={statusData}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
                 outerRadius={90}
                 paddingAngle={3}
                 dataKey="value"
-              >
-                {statusData.map((_, i) => (
-                  <Cell key={i} fill={STATUS_COLORS[i]} />
-                ))}
-              </Pie>
+              />
               <Tooltip
                 contentStyle={{
                   fontSize: 12,
@@ -285,20 +279,7 @@ export function Dashboard() {
                   borderRadius: 6,
                 }}
               />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
-                {priorityData.map((entry) => (
-                  <Cell
-                    key={entry.priority}
-                    fill={
-                      entry.priority === 'High'
-                        ? '#f87171'
-                        : entry.priority === 'Medium'
-                          ? '#fbbf24'
-                          : '#94a3b8'
-                    }
-                  />
-                ))}
-              </Bar>
+              <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
