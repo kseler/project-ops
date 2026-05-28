@@ -1,4 +1,3 @@
-import { GripVertical } from 'lucide-react';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
@@ -11,12 +10,11 @@ import {
   getTimelineGridStyle,
   SEGMENT_HEIGHT,
   SEGMENT_WIDTH,
-  toISO,
 } from '../lib/ganttUtils';
 import { useProjectDetail } from '../lib/store';
 import type { Task, TaskList } from '../lib/types';
 import { useDragHandler } from '../lib/useDragHandler';
-import { DragHandle } from './DragHandle';
+import { GanttTaskBar } from './GanttTaskBar';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -48,13 +46,6 @@ const DRAG_IDS = ['task-move', 'task-resize-left', 'task-resize-right'] as const
 
 type Row = { kind: 'header'; taskList: TaskList } | { kind: 'task'; task: Task };
 
-function entryClass(task: Task, todayStr: string): string {
-  if (task.status === 'done') return 'bg-slate-300 text-slate-500';
-  if (task.dueDate && task.dueDate < todayStr) return 'bg-red-400 text-white';
-  if (task.status === 'in-progress') return 'bg-indigo-500 text-white';
-  return 'bg-indigo-300 text-indigo-900';
-}
-
 export function ProjectGanttView() {
   const { taskLists, patchTask } = useProjectDetail();
 
@@ -63,8 +54,6 @@ export function ProjectGanttView() {
     t.setHours(0, 0, 0, 0);
     return t;
   }, []);
-  const todayStr = useMemo(() => toISO(today), [today]);
-
   const [renderStart, setRenderStart] = useState(() =>
     addDays(today, -INITIAL_BUFFER_DAYS),
   );
@@ -360,37 +349,7 @@ export function ProjectGanttView() {
             if (row.kind !== 'task') return null;
             const style = getEntryStyle(row.task, renderStart, i);
             if (!style) return null;
-            // Cast once — DragHandle serialises to data-drag-object; handler reads it
-            // back as a Task snapshot frozen at mousedown time.
-            const dragObject = row.task as unknown as Record<string, unknown>;
-            return (
-              <DragHandle
-                key={row.task.id}
-                dragId="task-move"
-                object={dragObject}
-                style={style}
-                title={`${row.task.name}${row.task.startDate ? ` · ${row.task.startDate}` : ''} → ${row.task.dueDate ?? ''}`}
-                className={`rounded text-xs flex items-center select-none group cursor-grab ${entryClass(row.task, todayStr)}`}
-              >
-                <DragHandle
-                  dragId="task-resize-left"
-                  object={dragObject}
-                  className="absolute left-0 top-0 bottom-0 w-3 flex items-center justify-center cursor-col-resize opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity z-10"
-                >
-                  <GripVertical size={9} />
-                </DragHandle>
-
-                <span className="truncate px-3">{row.task.name}</span>
-
-                <DragHandle
-                  dragId="task-resize-right"
-                  object={dragObject}
-                  className="absolute right-0 top-0 bottom-0 w-3 flex items-center justify-center cursor-col-resize opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity z-10"
-                >
-                  <GripVertical size={9} />
-                </DragHandle>
-              </DragHandle>
-            );
+            return <GanttTaskBar key={row.task.id} task={row.task} style={style} />;
           })}
         </div>
       </div>
