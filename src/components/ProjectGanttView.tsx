@@ -1,8 +1,11 @@
+import { GripVertical } from 'lucide-react';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
+import { updateTask } from '../lib/api';
 import {
   addDays,
+  applyDragOffset,
   daysBetween,
   getEntryStyle,
   getTimelineGridStyle,
@@ -12,6 +15,8 @@ import {
 } from '../lib/ganttUtils';
 import { useProjectDetail } from '../lib/store';
 import type { Task, TaskList } from '../lib/types';
+import { useDragHandler } from '../lib/useDragHandler';
+import { DragHandle } from './DragHandle';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -22,7 +27,7 @@ const DATE_HEADER_HEIGHT = MONTH_ROW_HEIGHT + DAY_ROW_HEIGHT;
 const INITIAL_BUFFER_DAYS = 180;
 const EXTEND_DAYS = 90;
 const SCROLL_THRESHOLD = 400;
-const DAY_BUFFER = 30; // extra days rendered outside the visible viewport on each side
+const DAY_BUFFER = 30;
 
 const MONTHS = [
   'Jan',
@@ -39,6 +44,8 @@ const MONTHS = [
   'Dec',
 ];
 
+const DRAG_IDS = ['task-move', 'task-resize-left', 'task-resize-right'] as const;
+
 type Row = { kind: 'header'; taskList: TaskList } | { kind: 'task'; task: Task };
 
 function entryClass(task: Task, todayStr: string): string {
@@ -49,9 +56,8 @@ function entryClass(task: Task, todayStr: string): string {
 }
 
 export function ProjectGanttView() {
-  const { taskLists } = useProjectDetail();
+  const { taskLists, patchTask } = useProjectDetail();
 
-  // Computed once on mount — today doesn't change during a session
   const today = useMemo(() => {
     const t = new Date();
     t.setHours(0, 0, 0, 0);
@@ -67,7 +73,6 @@ export function ProjectGanttView() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const adjusting = useRef(false);
 
-  // Recomputes only when taskLists reference changes (task mutations in the store)
   const rows = useMemo<Row[]>(
     () =>
       taskLists.flatMap((tl) => [
@@ -77,7 +82,6 @@ export function ProjectGanttView() {
     [taskLists],
   );
 
-  // Recomputes only when render range changes (infinite scroll extensions)
   const totalDays = useMemo(
     () => daysBetween(renderStart, renderEnd),
     [renderStart, renderEnd],
@@ -91,12 +95,10 @@ export function ProjectGanttView() {
   );
   const todayLeft = todayDayIndex * SEGMENT_WIDTH;
 
-  // Expose to handleScroll via ref so the callback needs zero deps
   const totalDaysRef = useRef(totalDays);
   totalDaysRef.current = totalDays;
 
   // ── Month segments ─────────────────────────────────────────────────────────
-  // Recomputes only on render range changes — O(totalDays) loop stays out of task updates
   const monthSegments = useMemo(() => {
     const segments: { left: number; width: number; label: string }[] = [];
     let segStart = 0;
@@ -119,7 +121,7 @@ export function ProjectGanttView() {
     return segments;
   }, [renderStart, totalDays]);
 
-  // ── Day labels — full dataset, rendering is windowed below ─────────────────
+  // ── Day labels ─────────────────────────────────────────────────────────────
   const dayLabels = useMemo(() => {
     const labels: { left: number; label: string; isToday: boolean }[] = [];
     for (let day = 0; day < totalDays; day++) {
@@ -132,26 +134,21 @@ export function ProjectGanttView() {
     return labels;
   }, [renderStart, totalDays, todayDayIndex]);
 
-  // ── Grid style ─────────────────────────────────────────────────────────────
   const gridStyle = useMemo(
     () => getTimelineGridStyle(totalDays, rows.length),
     [totalDays, rows.length],
   );
 
-  // ── Virtual window for day cells ───────────────────────────────────────────
-  // Stored as pixel offsets in timeline coordinates (relative to renderStart).
-  // Hysteresis: state only updates when the viewport scrolls outside the buffered
-  // window, keeping re-renders to ~1 per DAY_BUFFER days of scrolling.
+  // ── Virtual window ─────────────────────────────────────────────────────────
   const [visiblePxRange, setVisiblePxRange] = useState<[number, number]>(() => {
     const centerPx = INITIAL_BUFFER_DAYS * SEGMENT_WIDTH;
-    const approxViewportPx = 60 * SEGMENT_WIDTH; // safe fallback before layout
+    const approxViewportPx = 60 * SEGMENT_WIDTH;
     return [
       Math.max(0, centerPx - approxViewportPx / 2 - DAY_BUFFER * SEGMENT_WIDTH),
       centerPx + approxViewportPx / 2 + DAY_BUFFER * SEGMENT_WIDTH,
     ];
   });
 
-  // Only the day cells within the visible window are rendered
   const visibleDayLabels = useMemo(
     () =>
       dayLabels.filter((d) => d.left >= visiblePxRange[0] && d.left <= visiblePxRange[1]),
@@ -163,7 +160,6 @@ export function ProjectGanttView() {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollLeft = todayLeft - el.clientWidth / 2;
-    // Refine visible range now that we know the real viewport width
     setVisiblePxRange([
       Math.max(0, el.scrollLeft - DAY_BUFFER * SEGMENT_WIDTH),
       el.scrollLeft + el.clientWidth + DAY_BUFFER * SEGMENT_WIDTH,
@@ -171,19 +167,14 @@ export function ProjectGanttView() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scroll handler ─────────────────────────────────────────────────────────
-  // Zero deps: reads only refs and module constants; state updates via stable setters.
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el || adjusting.current) return;
 
-    // Near left edge — extend left and compensate scrollLeft
     if (el.scrollLeft < SCROLL_THRESHOLD) {
       adjusting.current = true;
       flushSync(() => setRenderStart((prev) => addDays(prev, -EXTEND_DAYS)));
       el.scrollLeft += EXTEND_DAYS * SEGMENT_WIDTH;
-      // Sync visible range with the new scroll position immediately — without
-      // this, visiblePxRange would refer to the old coordinate space until the
-      // next scroll event, leaving the day row blank.
       setVisiblePxRange([
         Math.max(0, el.scrollLeft - DAY_BUFFER * SEGMENT_WIDTH),
         el.scrollLeft + el.clientWidth + DAY_BUFFER * SEGMENT_WIDTH,
@@ -194,16 +185,13 @@ export function ProjectGanttView() {
       return;
     }
 
-    // Near right edge — extend right (no scroll compensation needed)
     if (el.scrollLeft + el.clientWidth > el.scrollWidth - SCROLL_THRESHOLD) {
       setRenderEnd((prev) => addDays(prev, EXTEND_DAYS));
     }
 
-    // Update virtual window with hysteresis:
-    // only re-render day cells when the viewport drifts outside the buffered range
     const { scrollLeft, clientWidth } = el;
     setVisiblePxRange((prev) => {
-      if (scrollLeft >= prev[0] && scrollLeft + clientWidth <= prev[1]) return prev; // bail out
+      if (scrollLeft >= prev[0] && scrollLeft + clientWidth <= prev[1]) return prev;
       return [
         Math.max(0, scrollLeft - DAY_BUFFER * SEGMENT_WIDTH),
         Math.min(
@@ -212,7 +200,38 @@ export function ProjectGanttView() {
         ),
       ];
     });
-  }, []); // stable across renders
+  }, []);
+
+  // ── Drag ───────────────────────────────────────────────────────────────────
+  // drag.object is a full Task snapshot captured at mousedown — no store lookup needed.
+  // onDrag computes from the original dates + pointer delta and writes straight to the store.
+  // onDragEnd uses the same snapshot + final delta to persist to the server.
+
+  useDragHandler({
+    onDragStart(drag) {
+      return (DRAG_IDS as readonly string[]).includes(drag.dragId);
+    },
+    onDrag(drag) {
+      const task = drag.object as Task;
+      const offsetDays = Math.round(
+        (drag.currentPointerX - drag.initialPointerX) / SEGMENT_WIDTH,
+      );
+      patchTask(applyDragOffset(task, drag.dragId, offsetDays));
+    },
+    onDragEnd(drag) {
+      const task = drag.object as Task;
+      const offsetDays = Math.round(
+        (drag.currentPointerX - drag.initialPointerX) / SEGMENT_WIDTH,
+      );
+      if (offsetDays === 0) return;
+
+      const updated = applyDragOffset(task, drag.dragId, offsetDays);
+
+      if (updated === task) return;
+
+      updateTask(task.id, { ...updated }).catch(console.error);
+    },
+  });
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -341,15 +360,36 @@ export function ProjectGanttView() {
             if (row.kind !== 'task') return null;
             const style = getEntryStyle(row.task, renderStart, i);
             if (!style) return null;
+            // Cast once — DragHandle serialises to data-drag-object; handler reads it
+            // back as a Task snapshot frozen at mousedown time.
+            const dragObject = row.task as unknown as Record<string, unknown>;
             return (
-              <div
+              <DragHandle
                 key={row.task.id}
+                dragId="task-move"
+                object={dragObject}
                 style={style}
                 title={`${row.task.name}${row.task.startDate ? ` · ${row.task.startDate}` : ''} → ${row.task.dueDate ?? ''}`}
-                className={`rounded text-xs flex items-center px-2 overflow-hidden cursor-default select-none ${entryClass(row.task, todayStr)}`}
+                className={`rounded text-xs flex items-center select-none group cursor-grab ${entryClass(row.task, todayStr)}`}
               >
-                <span className="truncate">{row.task.name}</span>
-              </div>
+                <DragHandle
+                  dragId="task-resize-left"
+                  object={dragObject}
+                  className="absolute left-0 top-0 bottom-0 w-3 flex items-center justify-center cursor-col-resize opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity z-10"
+                >
+                  <GripVertical size={9} />
+                </DragHandle>
+
+                <span className="truncate px-3">{row.task.name}</span>
+
+                <DragHandle
+                  dragId="task-resize-right"
+                  object={dragObject}
+                  className="absolute right-0 top-0 bottom-0 w-3 flex items-center justify-center cursor-col-resize opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity z-10"
+                >
+                  <GripVertical size={9} />
+                </DragHandle>
+              </DragHandle>
             );
           })}
         </div>

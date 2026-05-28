@@ -76,6 +76,41 @@ export function getTimelineGridStyle(totalDays: number, rowCount: number): CSSPr
 }
 
 /**
+ * Apply a day offset to a task's dates based on the drag handle being used.
+ * Returns the same task reference if no change would occur.
+ */
+export function applyDragOffset(task: Task, dragId: string, offsetDays: number): Task {
+  if (Math.abs(offsetDays) === 0 || !task.dueDate) return task;
+
+  // Safe mutation — drag.object is a JSON.parse copy, never the store reference.
+  task.startDate ??= task.dueDate;
+
+  if (dragId === 'task-move') {
+    return {
+      ...task,
+      startDate: toISO(addDays(parseDate(task.startDate), offsetDays)),
+      dueDate: toISO(addDays(parseDate(task.dueDate), offsetDays)),
+    };
+  }
+
+  if (dragId === 'task-resize-left') {
+    const newStart = addDays(parseDate(task.startDate ?? task.dueDate), offsetDays);
+    const end = task.dueDate ? parseDate(task.dueDate) : null;
+    if (end && newStart > end) return task;
+    return { ...task, startDate: toISO(newStart) };
+  }
+
+  if (dragId === 'task-resize-right') {
+    const start = parseDate(task.startDate ?? task.dueDate);
+    const newEnd = addDays(parseDate(task.dueDate), offsetDays);
+    if (start && newEnd < start) return task;
+    return { ...task, dueDate: toISO(newEnd) };
+  }
+
+  return task;
+}
+
+/**
  * Absolute-position style for a task entry bar.
  * Returns null if the task has no dates (nothing to render).
  * For single-date tasks (dueDate only) the bar spans one day.
