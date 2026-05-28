@@ -329,7 +329,7 @@ export function ProjectGanttView() {
           />
 
           {/* Header row backgrounds */}
-          {rows.map((row, i) =>
+          {/* {rows.map((row, i) =>
             row.kind === 'header' ? (
               <div
                 key={`hbg-${i}`}
@@ -342,7 +342,7 @@ export function ProjectGanttView() {
                 }}
               />
             ) : null,
-          )}
+          )} */}
 
           {/* Task entries */}
           {rows.map((row, i) => {
