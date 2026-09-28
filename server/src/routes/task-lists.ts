@@ -1,57 +1,77 @@
-import { trace } from '@opentelemetry/api';
-import { Request, Response,Router } from 'express';
+import { eq} from 'drizzle-orm';
+import { Request, Response, Router } from 'express';
 
-import { addTask,addTaskList, getProjectById, getTaskListById } from '../store.js';
+import { db } from '../db/index.js';
+import { projects, taskLists } from '../db/schema.js';
 
 const router = Router();
-const tracer = trace.getTracer('project-ops-api');
 
-// POST /api/projects/:projectId/tasklists
-router.post('/projects/:projectId/tasklists', (req: Request, res: Response) => {
+// GET /api/task-lists
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const project = getProjectById(req.params.projectId);
-    if (!project) {
-      res.status(404).json({ error: 'Project not found' });
-      return;
+    const projectId = req.query.projectId;
+
+    if (typeof projectId !== 'string') {
+      return res.status(400).json({
+        error: 'projectId is required',
+      });
     }
-    const { name } = req.body;
-    if (!name) {
-      res.status(400).json({ error: 'name is required' });
-      return;
-    }
-    const taskList = addTaskList({ projectId: req.params.projectId, name });
-    res.status(201).json({ ...taskList, tasks: [] });
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+
+    const result = await db
+      .select()
+      .from(taskLists)
+      .where(eq(taskLists.projectId, projectId));
+
+    return res.json(result);
+  } catch (error) {
+    console.error('Failed to fetch task lists', error);
+
+    return res.status(500).json({
+      error: 'Failed to fetch task lists',
+    });
   }
 });
 
-// POST /api/tasklists/:taskListId/tasks
-router.post('/tasklists/:taskListId/tasks', (req: Request, res: Response) => {
+// POST /api/task-lists
+router.post('/', async (req: Request, res: Response) => {
   try {
-    const taskList = getTaskListById(req.params.taskListId);
-    if (!taskList) {
-      res.status(404).json({ error: 'Task list not found' });
-      return;
+    const { projectId, name } = req.body;
+
+    if (!projectId || !name) {
+      return res.status(400).json({
+        error: 'projectId and name are required',
+      });
     }
-    const { name, description, priority, assignee, startDate, dueDate } = req.body;
-    if (!name) {
-      res.status(400).json({ error: 'name is required' });
-      return;
+
+    const [project] = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.id, projectId));
+
+    if (!project) {
+      return res.status(404).json({
+        error: 'Project not found',
+      });
     }
-    const task = addTask({
-      taskListId: req.params.taskListId,
-      name,
-      description,
-      status: 'todo',
-      priority: priority ?? 'medium',
-      assignee,
-      startDate: startDate ?? undefined,
-      dueDate: dueDate ?? undefined,
+
+    const [taskList] = await db
+      .insert(taskLists)
+      .values({
+        projectId,
+        name,
+      })
+      .returning();
+
+    return res.status(201).json({
+      ...taskList,
+      tasks: [],
     });
-    res.status(201).json(task);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+  } catch (error) {
+    console.error('Failed to create task list', error);
+
+    return res.status(500).json({
+      error: 'Failed to create task list',
+    });
   }
 });
 

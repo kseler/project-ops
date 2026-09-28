@@ -1,93 +1,77 @@
-import { trace } from '@opentelemetry/api';
-import { Request, Response,Router } from 'express';
+import { and, eq, isNull } from 'drizzle-orm';
+import { Request, Response, Router } from 'express';
 
-import {
-  addProject,
-  getProjectById,
-  getProjects,
-  getTaskListsByProject,
-  getTasksByTaskList,
-} from '../store.js';
+import { db } from '../db/index.js';
+import { projects } from '../db/schema.js';
 
 const router = Router();
-const tracer = trace.getTracer('project-ops-api');
 
 // GET /api/projects
-router.get('/', (_req: Request, res: Response) => {
+router.get('/', async (_req, res) => {
   try {
-    const projects = getProjects();
-    // Enrich each project with task counts
-    const enriched = projects.map((project) => {
-      const taskLists = getTaskListsByProject(project.id);
-      const allTasks = taskLists.flatMap((tl) => getTasksByTaskList(tl.id));
-      return {
-        ...project,
-        taskCount: allTasks.length,
-        completedCount: allTasks.filter((t) => t.status === 'done').length,
-      };
-    });
-    res.json(enriched);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    const result = await db
+      .select()
+      .from(projects)
+      .where(isNull(projects.archivedAt));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Failed to fetch projects', error);
+    res.status(500).json({ message: 'Failed to fetch projects' });
   }
 });
 
 // GET /api/projects/:id
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', async (req: Request<{id: string}>, res: Response) => {
   try {
-    const project = getProjectById(req.params.id);
+    const [project] = await db
+      .select()
+      .from(projects)
+      .where(and(
+        eq(projects.id, req.params.id),
+        isNull(projects.archivedAt),
+      ),);
+
     if (!project) {
-      res.status(404).json({ error: 'Project not found' });
-      return;
+      return res.status(404).json({ message: 'Project not found' });
     }
-    const taskLists = getTaskListsByProject(project.id);
-    const allTasks = taskLists.flatMap((tl) => getTasksByTaskList(tl.id));
-    res.json({
-      ...project,
-      taskCount: allTasks.length,
-      completedCount: allTasks.filter((t) => t.status === 'done').length,
-    });
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+
+    res.json(project);
+  } catch (error) {
+    console.error('Failed to fetch project', error);
+    res.status(500).json({ message: 'Failed to fetch project' });
   }
 });
+
 
 // POST /api/projects
-router.post('/', (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const { name, description, status, dueDate } = req.body;
-    if (!name || !dueDate) {
-      res.status(400).json({ error: 'name and dueDate are required' });
-      return;
-    }
-    const project = addProject({
-      name,
-      description: description ?? '',
-      status: status ?? 'active',
-      dueDate,
-    });
-    res.status(201).json(project);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
 
-// GET /api/projects/:id/tasklists
-router.get('/:id/tasklists', (req: Request, res: Response) => {
-  try {
-    const project = getProjectById(req.params.id);
-    if (!project) {
-      res.status(404).json({ error: 'Project not found' });
-      return;
+    if (!name || !dueDate) {
+      return res.status(400).json({
+        error: 'name and dueDate are required',
+      });
     }
-    const taskLists = getTaskListsByProject(req.params.id);
-    const enriched = taskLists.map((tl) => ({
-      ...tl,
-      tasks: getTasksByTaskList(tl.id),
-    }));
-    res.json(enriched);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+
+    const [project] = await db
+      .insert(projects)
+      .values({
+        name,
+        description: description ?? null,
+        status: status ?? 'active',
+        dueDate,
+      })
+      .returning();
+
+    return res.status(201).json(project);
+  } catch (error) {
+    console.error('Failed to create project', error);
+
+    return res.status(500).json({
+      error: 'Failed to create project',
+    });
   }
 });
 
