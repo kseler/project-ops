@@ -55,7 +55,7 @@ const tl3a = uuid();
 const tl4a = uuid(),
   tl4b = uuid();
 
-export let projects: Project[] = [
+export const projects: Project[] = [
   {
     id: p1,
     name: 'API Gateway Modernisation',
@@ -90,7 +90,7 @@ export let projects: Project[] = [
   },
 ];
 
-export let taskLists: TaskList[] = [
+export const taskLists: TaskList[] = [
   { id: tl1a, projectId: p1, name: 'Sprint 1', order: 0 },
   { id: tl1b, projectId: p1, name: 'Sprint 2', order: 1 },
   { id: tl2a, projectId: p2, name: 'Design', order: 0 },
@@ -100,7 +100,7 @@ export let taskLists: TaskList[] = [
   { id: tl4b, projectId: p4, name: 'QA', order: 1 },
 ];
 
-export let tasks: Task[] = [
+export const tasks: Task[] = [
   // p1 – Sprint 1
   {
     id: uuid(),

@@ -1,6 +1,7 @@
-import { Router, Request, Response } from 'express';
 import { trace } from '@opentelemetry/api';
-import { getTaskById, updateTask, deleteTask } from '../store.js';
+import { Request, Response,Router } from 'express';
+
+import { deleteTask,getTaskById, updateTask } from '../store.js';
 
 const router = Router();
 const tracer = trace.getTracer('project-ops-api');

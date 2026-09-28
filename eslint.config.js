@@ -7,15 +7,11 @@ import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import tseslint from 'typescript-eslint';
 
 export default [
-  js.configs.recommended,
-
-  ...tseslint.configs.recommended,
-
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.app.json', './tsconfig.node.json'],
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -56,9 +52,18 @@ export default [
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-trailing-spaces': 'error',
     },
+  },
 
-    ignores: ['dist', 'node_modules', 'coverage'],
+  {
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/coverage/**',
+    ],
   },
 
   prettier,
+  js.configs.recommended,
+
+  ...tseslint.configs.recommended,
 ];
