@@ -14,7 +14,7 @@ app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
 
 app.use('/api/projects', projectsRouter);
-app.use('/api', tasklistsRouter);
+app.use('/api/task-lists', tasklistsRouter);
 app.use('/api/tasks', tasksRouter);
 
 app.get('/health', (_req, res) => {
