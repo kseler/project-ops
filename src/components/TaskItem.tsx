@@ -70,7 +70,9 @@ export function TaskItem({ task }: Props) {
     try {
       await deleteTask(task.id);
       removeTask(task.taskListId, task.id);
-    } catch {
+    } catch (error) {
+      console.error('Failed to delete tasks', error);
+    }finally {
       setBusy(false);
     }
   };
@@ -92,8 +94,8 @@ export function TaskItem({ task }: Props) {
         dueDate: nextDue,
       });
       patchTask(updated);
-    } catch {
-      /* ignore */
+    } catch (error){
+      console.error('Failed to update task dates', error);
     }
   };
 

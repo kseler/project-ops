@@ -6,7 +6,7 @@ import {
   getTaskListsByProject,
   getTasksByTaskList,
   addProject,
-} from '../store';
+} from '../store.js';
 
 const router = Router();
 const tracer = trace.getTracer('project-ops-api');

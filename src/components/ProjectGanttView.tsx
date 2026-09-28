@@ -328,22 +328,6 @@ export function ProjectGanttView() {
             }}
           />
 
-          {/* Header row backgrounds */}
-          {/* {rows.map((row, i) =>
-            row.kind === 'header' ? (
-              <div
-                key={`hbg-${i}`}
-                className="absolute bg-slate-50 pointer-events-none"
-                style={{
-                  top: i * SEGMENT_HEIGHT,
-                  left: 0,
-                  width: timelineWidth,
-                  height: SEGMENT_HEIGHT,
-                }}
-              />
-            ) : null,
-          )} */}
-
           {/* Task entries */}
           {rows.map((row, i) => {
             if (row.kind !== 'task') return null;
