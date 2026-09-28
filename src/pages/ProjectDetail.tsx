@@ -22,7 +22,7 @@ const views: { id: View; label: string; icon: React.ReactNode }[] = [
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
-  const { project, taskLists, loading, error, fetchProject, reset } = useProjectDetail();
+  const { project, loading, error, fetchProject, reset } = useProjectDetail();
   const [view, setView] = useState<View>('list');
 
   useEffect(() => {
@@ -35,11 +35,11 @@ export function ProjectDetail() {
   if (error) return <div className="p-8 text-sm text-red-400">{error}</div>;
   if (!project) return null;
 
-  const totalTasks = taskLists.flatMap((tl) => tl.tasks).length;
-  const doneTasks = taskLists
-    .flatMap((tl) => tl.tasks)
-    .filter((t) => t.status === 'done').length;
-  const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+  // const totalTasks = taskLists.flatMap((tl) => tl.tasks).length;
+  // const doneTasks = taskLists
+  //   .flatMap((tl) => tl.tasks)
+  //   .filter((t) => t?.status === 'done').length;
+  // const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
   return (
     <div className="px-8 py-8">
@@ -60,7 +60,7 @@ export function ProjectDetail() {
       </div>
       <p className="text-sm text-slate-500 mb-5">{project.description}</p>
 
-      <div className="mb-6">
+      {/* <div className="mb-6">
         <div className="flex justify-between text-xs text-slate-500 mb-1.5">
           <span>
             {doneTasks} of {totalTasks} tasks complete
@@ -73,7 +73,7 @@ export function ProjectDetail() {
             style={{ width: `${progress}%` }}
           />
         </div>
-      </div>
+      </div> */}
 
       <div className="flex items-center gap-1 mb-6 border-b border-slate-100">
         {views.map(({ id: vid, label, icon }) => (

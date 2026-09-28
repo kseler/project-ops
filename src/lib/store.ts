@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { getProject, getTaskLists } from './api';
+import { getProject, getTaskLists, getTasks } from './api';
 import type { Project, Task, TaskList } from './types';
 
 interface State {
@@ -12,6 +12,7 @@ interface State {
 
 interface Actions {
   fetchProject: (id: string) => Promise<void>;
+  getTasks: (id: string) => Promise<void>;
   addTaskList: (list: TaskList) => void;
   addTask: (taskListId: string, task: Task) => void;
   patchTask: (updated: Task) => void;
@@ -36,6 +37,22 @@ export const useProjectDetail = create<State & Actions>((set) => ({
       set({ project, taskLists, loading: false });
     } catch (e) {
       set({ error: (e as Error).message, loading: false });
+    }
+  },
+
+
+  getTasks: async (taskListId: string) => {
+    try {
+      const tasks = await getTasks(taskListId);
+
+      set((state) => ({
+        taskLists: state.taskLists.map((taskList) =>
+          taskList.id === taskListId
+            ? { ...taskList, tasks }
+            : taskList,
+        )}));
+    } catch (error) {
+      console.error('Failed to load tasks', error);
     }
   },
 

@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { createTask } from '../lib/api';
 import { useProjectDetail } from '../lib/store';
@@ -11,12 +11,17 @@ interface Props {
 }
 
 export function TaskListView({ taskList }: Props) {
-  const { addTask } = useProjectDetail();
+  const { addTask, getTasks} = useProjectDetail();
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newStartDate, setNewStartDate] = useState('');
   const [newDueDate, setNewDueDate] = useState('');
   const [busy, setBusy] = useState(false);
+
+   useEffect(() => {
+      if (!taskList.id) return;
+      getTasks(taskList.id);
+    }, [getTasks, taskList.id]);
 
   const handleAdd = async () => {
     if (!newName.trim() || busy) return;
@@ -41,7 +46,7 @@ export function TaskListView({ taskList }: Props) {
     setNewDueDate('');
   };
 
-  const done = taskList.tasks.filter((t) => t.status === 'done').length;
+  const done = taskList.tasks?.filter((t) => t.status === 'done')?.length ?? 0;
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -50,7 +55,7 @@ export function TaskListView({ taskList }: Props) {
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-800">{taskList.name}</h3>
           <span className="text-xs text-slate-400">
-            {done}/{taskList.tasks.length}
+            {done}/{taskList?.tasks?.length ?? 0}
           </span>
         </div>
         <button
@@ -63,10 +68,10 @@ export function TaskListView({ taskList }: Props) {
 
       {/* Tasks */}
       <div className="divide-y divide-slate-50">
-        {taskList.tasks.length === 0 && !adding && (
+        {taskList?.tasks?.length === 0 && !adding && (
           <p className="px-4 py-4 text-xs text-slate-400">No tasks yet.</p>
         )}
-        {taskList.tasks.map((task) => (
+        {taskList.tasks?.map((task) => (
           <TaskItem key={task.id} task={task} />
         ))}
       </div>
