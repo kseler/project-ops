@@ -11,7 +11,7 @@ export const createProjectSchema = z.object({
   name: z.string().trim().min(1),
   description: z.string().trim().optional(),
   status: z.enum(projectStatusEnum.enumValues).optional(),
-  dueDate: z.string().min(1),
+  dueDate: z.iso.date(),
 });
 
 const projectIdParamsSchema = z.object({
