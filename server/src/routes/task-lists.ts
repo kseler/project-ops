@@ -62,10 +62,7 @@ router.post('/', async (req: Request, res: Response) => {
       })
       .returning();
 
-    return res.status(201).json({
-      ...taskList,
-      tasks: [],
-    });
+    return res.status(201).json(taskList);
   } catch (error) {
     console.error('Failed to create task list', error);
 

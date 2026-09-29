@@ -1,4 +1,4 @@
-import { eq} from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { Request, Response,Router } from 'express';
 
 import { db } from '../db/index.js';
@@ -8,20 +8,28 @@ const router = Router();
 
 // GET /api/tasks
 router.get('/', async (req: Request, res: Response) => {
-  const taskListId = req.query.taskListId;
+  try {
+    const taskListId = req.query.taskListId;
 
-  if (typeof taskListId !== 'string') {
-    return res.status(400).json({
-      error: 'taskListId is required',
+    if (typeof taskListId !== 'string') {
+      return res.status(400).json({
+        error: 'taskListId is required',
+      });
+    }
+
+    const result = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.taskListId, taskListId));
+
+    return res.json(result);
+  } catch (error) {
+    console.error('Failed to fetch task', error);
+
+    return res.status(500).json({
+      error: 'Failed to fetch task',
     });
   }
-
-  const result = await db
-    .select()
-    .from(tasks)
-    .where(eq(tasks.taskListId, taskListId));
-
-  return res.json(result);
 });
 
 // POST /api/tasks
