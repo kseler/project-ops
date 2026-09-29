@@ -1,21 +1,52 @@
 import { eq } from 'drizzle-orm';
 import { Request, Response,Router } from 'express';
+import z from 'zod';
 
 import { db } from '../db/index.js';
-import { taskLists, tasks } from '../db/schema.js';
+import { taskLists, taskPriorityEnum, tasks, taskStatusEnum } from '../db/schema.js';
+
+export const getTasksQuerySchema = z.object({
+  taskListId: z.uuid(),
+});
+
+export const taskIdParamsSchema = z.object({
+  id: z.uuid(),
+});
+
+export const createTaskSchema = z.object({
+  taskListId: z.uuid(),
+  name: z.string().trim().min(1),
+  description: z.string().trim().nullable().optional(),
+  priority: z.enum(taskPriorityEnum.enumValues).optional(),
+  assignee: z.string().trim().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  dueDate: z.string().nullable().optional(),
+});
+
+export const updateTaskSchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  description: z.string().trim().nullable().optional(),
+  status: z.enum(taskStatusEnum.enumValues).optional(),
+  priority: z.enum(taskPriorityEnum.enumValues).optional(),
+  assignee: z.string().trim().nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  dueDate: z.string().nullable().optional(),
+});
 
 const router = Router();
 
 // GET /api/tasks
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const taskListId = req.query.taskListId;
+     const parsedQuery = getTasksQuerySchema.safeParse(req.query);
 
-    if (typeof taskListId !== 'string') {
-      return res.status(400).json({
-        error: 'taskListId is required',
-      });
-    }
+      if (!parsedQuery.success) {
+        return res.status(400).json({
+          error: parsedQuery.error.issues,
+        });
+      }
+
+    const { taskListId } = parsedQuery.data;
 
     const result = await db
       .select()
@@ -35,6 +66,14 @@ router.get('/', async (req: Request, res: Response) => {
 // POST /api/tasks
 router.post('/', async (req: Request, res: Response) => {
   try {
+    const parsedBody = createTaskSchema.safeParse(req.body);
+
+    if (!parsedBody.success) {
+      return res.status(400).json({
+        error: parsedBody.error.issues,
+      });
+    }
+
     const {
       taskListId,
       name,
@@ -43,13 +82,7 @@ router.post('/', async (req: Request, res: Response) => {
       assignee,
       startDate,
       dueDate,
-    } = req.body;
-
-    if (!taskListId || !name) {
-      return res.status(400).json({
-        error: 'taskListId and name are required',
-      });
-    }
+    } = parsedBody.data;
 
     const [taskList] = await db
       .select({ id: taskLists.id })
@@ -89,10 +122,25 @@ router.post('/', async (req: Request, res: Response) => {
 // PATCH /api/tasks/:id
 router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
   try {
+    const parsedParams = taskIdParamsSchema.safeParse(req.params);
+    const parsedBody = updateTaskSchema.safeParse(req.body);
+
+    if (!parsedParams.success) {
+      return res.status(400).json({
+        error: parsedParams.error.issues,
+      });
+    }
+
+    if (!parsedBody.success) {
+      return res.status(400).json({
+        error: parsedBody.error.issues,
+      });
+    }
+
     const [updated] = await db
       .update(tasks)
       .set({
-        ...req.body,
+        ...parsedBody.data,
         updatedAt: new Date(),
       })
       .where(eq(tasks.id, req.params.id))
@@ -117,6 +165,14 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
 // DELETE /api/tasks/:id
 router.delete('/:id', async (req: Request<{id: string}>, res: Response) => {
   try {
+    const parsedParams = taskIdParamsSchema.safeParse(req.params);
+
+    if (!parsedParams.success) {
+      return res.status(400).json({
+        error: parsedParams.error.issues,
+      });
+    }
+
     const [deleted] = await db
       .delete(tasks)
       .where(eq(tasks.id, req.params.id))

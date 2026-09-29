@@ -1,21 +1,33 @@
-import { eq} from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { Request, Response, Router } from 'express';
+import z from 'zod';
 
 import { db } from '../db/index.js';
 import { projects, taskLists } from '../db/schema.js';
+
+export const getTaskListsQuerySchema = z.object({
+  projectId: z.uuid(),
+});
+
+export const createTaskListSchema = z.object({
+  projectId: z.uuid(),
+  name: z.string().trim().min(1),
+});
 
 const router = Router();
 
 // GET /api/task-lists
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const projectId = req.query.projectId;
+    const parsedQuery = getTaskListsQuerySchema.safeParse(req.query);
 
-    if (typeof projectId !== 'string') {
+    if (!parsedQuery.success) {
       return res.status(400).json({
-        error: 'projectId is required',
+        error: parsedQuery.error.issues,
       });
     }
+
+    const { projectId } = parsedQuery.data;
 
     const result = await db
       .select()
@@ -35,13 +47,15 @@ router.get('/', async (req: Request, res: Response) => {
 // POST /api/task-lists
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { projectId, name } = req.body;
+    const parsedBody = createTaskListSchema.safeParse(req.body);
 
-    if (!projectId || !name) {
+    if (!parsedBody.success) {
       return res.status(400).json({
-        error: 'projectId and name are required',
+        error: parsedBody.error.issues,
       });
     }
+
+    const { projectId, name } = parsedBody.data;
 
     const [project] = await db
       .select({ id: projects.id })

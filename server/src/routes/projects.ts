@@ -1,13 +1,25 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { Request, Response, Router } from 'express';
+import { z } from 'zod';
 
 import { db } from '../db/index.js';
-import { projects } from '../db/schema.js';
+import { projects, projectStatusEnum } from '../db/schema.js';
 
 const router = Router();
 
+export const createProjectSchema = z.object({
+  name: z.string().trim().min(1),
+  description: z.string().trim().optional(),
+  status: z.enum(projectStatusEnum.enumValues).optional(),
+  dueDate: z.string().min(1),
+});
+
+const projectIdParamsSchema = z.object({
+  id: z.uuid(),
+});
+
 // GET /api/projects
-router.get('/', async (_req, res) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
     const result = await db
       .select()
@@ -24,11 +36,19 @@ router.get('/', async (_req, res) => {
 // GET /api/projects/:id
 router.get('/:id', async (req: Request<{id: string}>, res: Response) => {
   try {
+    const parsedParams = projectIdParamsSchema.safeParse(req.params);
+
+    if (!parsedParams.success) {
+      return res.status(400).json({ error: parsedParams.error.issues });
+    }
+
+    const { id } = parsedParams.data;
+
     const [project] = await db
       .select()
       .from(projects)
       .where(and(
-        eq(projects.id, req.params.id),
+        eq(projects.id, id),
         isNull(projects.archivedAt),
       ),);
 
@@ -47,22 +67,20 @@ router.get('/:id', async (req: Request<{id: string}>, res: Response) => {
 // POST /api/projects
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { name, description, status, dueDate } = req.body;
 
-    if (!name || !dueDate) {
+    const parsedBody = createProjectSchema.safeParse(req.body);
+
+    if (!parsedBody.success) {
       return res.status(400).json({
-        error: 'name and dueDate are required',
+        error: parsedBody.error.issues,
       });
     }
 
+    const data = parsedBody.data;
+
     const [project] = await db
       .insert(projects)
-      .values({
-        name,
-        description: description ?? null,
-        status: status ?? 'active',
-        dueDate,
-      })
+      .values(data)
       .returning();
 
     return res.status(201).json(project);
