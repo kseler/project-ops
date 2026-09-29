@@ -5,6 +5,8 @@ import z from 'zod';
 import { db } from '../db/index.js';
 import { taskLists, taskPriorityEnum, tasks, taskStatusEnum } from '../db/schema.js';
 
+const nullableDate = z.iso.date().nullable();
+
 export const getTasksQuerySchema = z.object({
   taskListId: z.uuid(),
 });
@@ -19,8 +21,8 @@ export const createTaskSchema = z.object({
   description: z.string().trim().nullable().optional(),
   priority: z.enum(taskPriorityEnum.enumValues).optional(),
   assignee: z.string().trim().nullable().optional(),
-  startDate: z.string().nullable().optional(),
-  dueDate: z.string().nullable().optional(),
+  startDate: nullableDate.optional(),
+  dueDate: nullableDate.optional(),
 });
 
 export const updateTaskSchema = z.object({
@@ -29,8 +31,8 @@ export const updateTaskSchema = z.object({
   status: z.enum(taskStatusEnum.enumValues).optional(),
   priority: z.enum(taskPriorityEnum.enumValues).optional(),
   assignee: z.string().trim().nullable().optional(),
-  startDate: z.string().nullable().optional(),
-  dueDate: z.string().nullable().optional(),
+  startDate: nullableDate.optional(),
+  dueDate: nullableDate.optional(),
 });
 
 const router = Router();
