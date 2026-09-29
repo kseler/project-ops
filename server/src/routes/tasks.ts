@@ -15,25 +15,47 @@ export const taskIdParamsSchema = z.object({
   id: z.uuid(),
 });
 
-export const createTaskSchema = z.object({
-  taskListId: z.uuid(),
-  name: z.string().trim().min(1),
-  description: z.string().trim().nullable().optional(),
-  priority: z.enum(taskPriorityEnum.enumValues).optional(),
-  assignee: z.string().trim().nullable().optional(),
-  startDate: nullableDate.optional(),
-  dueDate: nullableDate.optional(),
-});
+export const createTaskSchema = z
+  .object({
+    taskListId: z.uuid(),
+    name: z.string().trim().min(1),
+    description: z.string().trim().nullable().optional(),
+    priority: z.enum(taskPriorityEnum.enumValues).optional(),
+    assignee: z.string().trim().nullable().optional(),
+    startDate: nullableDate.optional(),
+    dueDate: nullableDate.optional(),
+  })
+  .refine(
+    (data) =>
+      !data.startDate ||
+      !data.dueDate ||
+      data.dueDate >= data.startDate,
+    {
+      message: 'dueDate must be on or after startDate',
+      path: ['dueDate'],
+    },
+  );
 
-export const updateTaskSchema = z.object({
-  name: z.string().trim().min(1).optional(),
-  description: z.string().trim().nullable().optional(),
-  status: z.enum(taskStatusEnum.enumValues).optional(),
-  priority: z.enum(taskPriorityEnum.enumValues).optional(),
-  assignee: z.string().trim().nullable().optional(),
-  startDate: nullableDate.optional(),
-  dueDate: nullableDate.optional(),
-});
+export const updateTaskSchema = z
+  .object({
+    name: z.string().trim().min(1).optional(),
+    description: z.string().trim().nullable().optional(),
+    status: z.enum(taskStatusEnum.enumValues).optional(),
+    priority: z.enum(taskPriorityEnum.enumValues).optional(),
+    assignee: z.string().trim().nullable().optional(),
+    startDate: nullableDate.optional(),
+    dueDate: nullableDate.optional(),
+  })
+  .refine(
+    (data) =>
+      !data.startDate ||
+      !data.dueDate ||
+      data.dueDate >= data.startDate,
+    {
+      message: 'dueDate must be on or after startDate',
+      path: ['dueDate'],
+    },
+  );
 
 const router = Router();
 
