@@ -51,19 +51,18 @@ export function TaskItem({ task }: Props) {
 
   const queryClient = useQueryClient();
 
-  const updateTaskListItem = (task: Task) => {
-    return updateTaskMutation.mutate(task, {
+  const busy = updateTaskMutation.isPending || deleteTaskMutation.isPending;
+
+  const updateTaskListItem = (patch: Partial<Task> & { id: string }) => {
+    return updateTaskMutation.mutate(patch, {
       onSuccess: (updatedTask) => {
-        updateTaskInCache(
-          queryClient,
-          taskKeys.byTaskList(updatedTask.taskListId),
-          updatedTask,
-        );
-      }}
-    );
-  }
+        updateTaskInCache(queryClient, taskKeys.byTaskList(updatedTask.taskListId), updatedTask);
+      },
+    });
+  };
 
   const toggleStatus = () => {
+    if (busy) return;
     const nextStatus =
       task.status === 'todo'
         ? 'in-progress'
@@ -71,17 +70,14 @@ export function TaskItem({ task }: Props) {
           ? 'done'
           : 'todo';
 
-    updateTaskListItem({...task, status: nextStatus});
+    updateTaskListItem({ id: task.id, status: nextStatus });
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
+    if (busy) return;
     deleteTaskMutation.mutate(task.id, {
       onSuccess: () => {
-        removeTaskFromCache(
-          queryClient,
-          taskKeys.byTaskList(task.taskListId),
-          task.id,
-        );
+        removeTaskFromCache(queryClient, taskKeys.byTaskList(task.taskListId), task.id);
       },
     });
   };
@@ -92,16 +88,13 @@ export function TaskItem({ task }: Props) {
     setEditingDates(true);
   };
 
-  const saveDates = async () => {
+  const saveDates = () => {
     setEditingDates(false);
     const nextStart = startDate || undefined;
     const nextDue = dueDate || undefined;
     if (nextStart === task.startDate && nextDue === task.dueDate) return;
 
-    updateTaskListItem({...task,
-      startDate: nextStart,
-      dueDate: nextDue
-    });
+    updateTaskListItem({ id: task.id, startDate: nextStart, dueDate: nextDue });
   };
 
   const cancelDateEdit = () => {
@@ -128,6 +121,7 @@ export function TaskItem({ task }: Props) {
       <div className="flex items-center gap-3 py-0.5">
         <button
           onClick={toggleStatus}
+          disabled={busy}
           className={`shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
             task.status === 'done'
               ? 'bg-indigo-500 border-indigo-500'
@@ -181,6 +175,7 @@ export function TaskItem({ task }: Props) {
 
         <button
           onClick={handleDelete}
+          disabled={busy}
           className="shrink-0 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
         >
           <Trash2 size={13} />

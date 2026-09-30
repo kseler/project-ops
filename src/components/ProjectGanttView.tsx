@@ -72,18 +72,20 @@ export function ProjectGanttView({ projectId }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const adjusting = useRef(false);
 
-  const rows = taskLists.reduce<Row[]>((acc, taskList) => {
-    const taskListTasks = tasks
-      .filter(({taskListId}) => taskListId === taskList.id)
-      .map((task) => ({ kind: 'task' as const, task }));
+  const rows = useMemo(() =>
+    taskLists.reduce<Row[]>((acc, taskList) => {
+      const taskListTasks = tasks
+        .filter(({taskListId}) => taskListId === taskList.id)
+        .map((task) => ({ kind: 'task' as const, task }));
 
-    acc.push(
-      { kind: 'header' as const, taskList },
-      ...taskListTasks
-    );
+      acc.push(
+        { kind: 'header' as const, taskList },
+        ...taskListTasks,
+      );
 
-    return acc;
-  }, []);
+      return acc;
+    }, []),
+  [taskLists, tasks]);
 
   const totalDays = useMemo(
     () => daysBetween(renderStart, renderEnd),
@@ -244,14 +246,12 @@ export function ProjectGanttView({ projectId }: Props) {
       if (updated === task) return;
 
       updateTaskMutation.mutate(
-        updated, {
-        onSuccess: (updatedTask) => {
-          updateTaskInCache(
-            queryClient,
-            taskKeys.byProject(projectId),
-            updatedTask,
-          );
-        }}
+        updated,
+        {
+          onSuccess: (updatedTask) => {
+            updateTaskInCache(queryClient, taskKeys.byProject(projectId), updatedTask);
+          },
+        },
       );
     },
   });

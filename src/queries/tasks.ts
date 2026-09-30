@@ -35,7 +35,7 @@ export function useCreateTask() {
 
     onSuccess: (createdTask, {taskListId}) => {
       queryClient.setQueryData<Task[]>(
-        ['tasks', taskListId],
+        taskKeys.byTaskList(taskListId),
         (current = []) => [...current, createdTask],
       );
     },
@@ -45,7 +45,7 @@ export function useCreateTask() {
 
 export function useUpdateTask() {
   return useMutation({
-    mutationFn: (data: Task) => updateTask(data.id, data),
+    mutationFn: ({ id, ...patch }: Partial<Task> & { id: string }) => updateTask(id, patch),
     onError: (error) => console.error('Failed to update task', error),
   });
 }
@@ -53,6 +53,7 @@ export function useUpdateTask() {
 export function useDeleteTask() {
   return useMutation({
     mutationFn: deleteTask,
+    onError: (error) => console.error('Failed to delete task', error),
   });
 }
 

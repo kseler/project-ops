@@ -8,8 +8,9 @@ export function useTaskLists(projectId?: string) {
   return useQuery({
     queryKey: ['taskLists', projectId],
     queryFn: () => getTaskLists(projectId!),
+    enabled: !!projectId,
   });
- }
+}
 
 export function useCreateTaskList() {
   const queryClient = useQueryClient();
