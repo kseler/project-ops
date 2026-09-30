@@ -1,41 +1,37 @@
 import { Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+
+import { useCreateProject, useProjects } from '@/queries/projects';
 
 import { ProjectCard } from '../components/ProjectCard';
-import { createProject, getProjects } from '../lib/api';
-import type { Project } from '../lib/types';
+
+interface CreateProjectForm {
+  name?: string
+  description?: string
+  dueDate?: string
+}
 
 export function Projects() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState<CreateProjectForm | null>(null);
 
-  const [form, setForm] = useState({ name: '', description: '', dueDate: '' });
+  const {
+    data: projects = [],
+    isLoading,
+    error,
+  } = useProjects();
 
-  useEffect(() => {
-    getProjects()
-      .then(setProjects)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+  const createProjectMutation = useCreateProject();
 
   const handleCreate = async () => {
-    if (!form.name.trim() || !form.dueDate || busy) return;
-    setBusy(true);
-    try {
-      const project = await createProject({
-        name: form.name.trim(),
-        description: form.description.trim(),
-        dueDate: new Date(form.dueDate).toISOString(),
-      });
-      setProjects((prev) => [project, ...prev]);
-      setForm({ name: '', description: '', dueDate: '' });
-      setShowForm(false);
-    } finally {
-      setBusy(false);
-    }
+    if (!form?.name?.trim() || !form.dueDate) return;
+
+    await createProjectMutation.mutateAsync({
+      name: form.name.trim(),
+      description: form.description?.trim(),
+      dueDate: form.dueDate
+    }, {
+      onSettled: () => setForm(null),
+    });
   };
 
   const active = projects.filter((p) => p.status === 'active');
@@ -49,7 +45,7 @@ export function Projects() {
           <p className="text-sm text-slate-500 mt-0.5">{projects.length} total</p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => setForm({name: '', description: '', dueDate: ''})}
           className="flex items-center gap-1.5 text-sm px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
         >
           <Plus size={15} /> New project
@@ -57,26 +53,26 @@ export function Projects() {
       </div>
 
       {/* New project form */}
-      {showForm && (
+      {form && (
         <div className="bg-white border border-slate-200 rounded-lg p-5 mb-6">
           <h3 className="text-sm font-semibold text-slate-800 mb-4">New project</h3>
           <div className="space-y-3">
             <input
               autoFocus
-              value={form.name}
+              value={form?.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="Project name"
               className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
             />
             <input
-              value={form.description}
+              value={form?.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="Description (optional)"
               className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
             />
             <input
               type="date"
-              value={form.dueDate}
+              value={form?.dueDate}
               onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
               className="text-sm px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
             />
@@ -84,16 +80,13 @@ export function Projects() {
           <div className="flex gap-2 mt-4">
             <button
               onClick={handleCreate}
-              disabled={busy}
+              disabled={createProjectMutation.isPending}
               className="text-sm px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
             >
               Create
             </button>
             <button
-              onClick={() => {
-                setShowForm(false);
-                setForm({ name: '', description: '', dueDate: '' });
-              }}
+              onClick={() => setForm(null)}
               className="text-sm px-4 py-2 text-slate-600 hover:text-slate-900"
             >
               Cancel
@@ -102,8 +95,8 @@ export function Projects() {
         </div>
       )}
 
-      {loading && <p className="text-sm text-slate-400">Loading…</p>}
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {isLoading && <p className="text-sm text-slate-400">Loading…</p>}
+      {error && <p className="text-sm text-red-400">{error.message}</p>}
 
       {active.length > 0 && (
         <section className="mb-8">
