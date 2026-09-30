@@ -1,8 +1,9 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Calendar, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { deleteTask, updateTask } from '../lib/api';
-import { useProjectDetail } from '../lib/store';
+import { removeTaskFromCache, taskKeys, updateTaskInCache, useDeleteTask, useUpdateTask } from '@/queries/tasks';
+
 import type { Task } from '../lib/types';
 
 const priorityDot: Record<Task['priority'], string> = {
@@ -41,40 +42,48 @@ interface Props {
 }
 
 export function TaskItem({ task }: Props) {
-  const { patchTask, removeTask } = useProjectDetail();
-  const [busy, setBusy] = useState(false);
   const [editingDates, setEditingDates] = useState(false);
   const [startDate, setStartDate] = useState(task.startDate ?? '');
   const [dueDate, setDueDate] = useState(task.dueDate ?? '');
 
-  const toggleStatus = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const nextStatus =
-        task.status === 'todo'
-          ? 'in-progress'
-          : task.status === 'in-progress'
-            ? 'done'
-            : 'todo';
-      const updated = await updateTask(task.id, { status: nextStatus });
-      patchTask(updated);
-    } finally {
-      setBusy(false);
-    }
+  const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTask();
+
+  const queryClient = useQueryClient();
+
+  const updateTaskListItem = (task: Task) => {
+    return updateTaskMutation.mutate(task, {
+      onSuccess: (updatedTask) => {
+        updateTaskInCache(
+          queryClient,
+          taskKeys.byTaskList(updatedTask.taskListId),
+          updatedTask,
+        );
+      }}
+    );
+  }
+
+  const toggleStatus = () => {
+    const nextStatus =
+      task.status === 'todo'
+        ? 'in-progress'
+        : task.status === 'in-progress'
+          ? 'done'
+          : 'todo';
+
+    updateTaskListItem({...task, status: nextStatus});
   };
 
   const handleDelete = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await deleteTask(task.id);
-      removeTask(task.taskListId, task.id);
-    } catch (error) {
-      console.error('Failed to delete tasks', error);
-    }finally {
-      setBusy(false);
-    }
+    deleteTaskMutation.mutate(task.id, {
+      onSuccess: () => {
+        removeTaskFromCache(
+          queryClient,
+          taskKeys.byTaskList(task.taskListId),
+          task.id,
+        );
+      },
+    });
   };
 
   const openDateEdit = () => {
@@ -88,15 +97,11 @@ export function TaskItem({ task }: Props) {
     const nextStart = startDate || undefined;
     const nextDue = dueDate || undefined;
     if (nextStart === task.startDate && nextDue === task.dueDate) return;
-    try {
-      const updated = await updateTask(task.id, {
-        startDate: nextStart,
-        dueDate: nextDue,
-      });
-      patchTask(updated);
-    } catch (error){
-      console.error('Failed to update task dates', error);
-    }
+
+    updateTaskListItem({...task,
+      startDate: nextStart,
+      dueDate: nextDue
+    });
   };
 
   const cancelDateEdit = () => {
@@ -118,7 +123,7 @@ export function TaskItem({ task }: Props) {
 
   return (
     <div
-      className={`px-3 py-2 rounded-md group hover:bg-slate-50 ${busy ? 'opacity-60' : ''}`}
+      className={`px-3 py-2 rounded-md group hover:bg-slate-50 ${updateTaskMutation.isPending || deleteTaskMutation.isPending ? 'opacity-60' : ''}`}
     >
       <div className="flex items-center gap-3 py-0.5">
         <button
