@@ -1,10 +1,11 @@
 import { ArrowLeft, GanttChart, LayoutList } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+
+import { useProject } from '@/queries/projects';
 
 import { ProjectGanttView } from '../components/ProjectGanttView';
 import { ProjectListView } from '../components/ProjectListView';
-import { useProjectDetail } from '../lib/store';
 import type { Project } from '../lib/types';
 
 type View = 'list' | 'gantt';
@@ -21,18 +22,17 @@ const views: { id: View; label: string; icon: React.ReactNode }[] = [
 ];
 
 export function ProjectDetail() {
-  const { id } = useParams<{ id: string }>();
-  const { project, loading, error, fetchProject, reset } = useProjectDetail();
+  const { id: projectId } = useParams<{ id: string }>();
   const [view, setView] = useState<View>('list');
 
-  useEffect(() => {
-    if (!id) return;
-    fetchProject(id);
-    return reset;
-  }, [id, fetchProject, reset]);
+  const {
+    data: project,
+    isLoading,
+    error,
+  } = useProject(projectId)
 
-  if (loading) return <div className="p-8 text-sm text-slate-400">Loading…</div>;
-  if (error) return <div className="p-8 text-sm text-red-400">{error}</div>;
+  if (isLoading) return <div className="p-8 text-sm text-slate-400">Loading…</div>;
+  if (error) return <div className="p-8 text-sm text-red-400">{error.message}</div>;
   if (!project) return null;
 
   // const totalTasks = taskLists.flatMap((tl) => tl.tasks).length;
@@ -92,8 +92,8 @@ export function ProjectDetail() {
         ))}
       </div>
 
-      {view === 'list' && <ProjectListView projectId={id!} />}
-      {view === 'gantt' && <ProjectGanttView />}
+      {view === 'list' && <ProjectListView projectId={projectId!} />}
+      {view === 'gantt' && <ProjectGanttView  projectId={projectId!} />}
     </div>
   );
 }
