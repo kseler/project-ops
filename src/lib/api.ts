@@ -33,25 +33,35 @@ export const createProject = (data: {
 export const getTaskLists = (projectId: string) =>
   request<TaskList[]>(`/task-lists?projectId=${projectId}`);
 
-export const createTaskList = (projectId: string, name: string) =>
-  request<TaskList>(`/task-lists?projectId=${projectId}`, {
+export const createTaskList = (data: {projectId: string, name: string}) =>
+  request<TaskList>(`/task-lists`, {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(data),
   });
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
 
-export const createTask = (
+export const createTask = (data: {
   taskListId: string,
-  data: { name: string; priority?: string; description?: string; startDate?: string; dueDate?: string },
-) =>
-  request<Task>(`/tasks?taskListId=${taskListId}`, {
+  name: string;
+  priority?: string;
+  description?: string;
+  startDate?: string;
+  dueDate?: string
+}) =>
+  request<Task>(`/tasks`, {
     method: 'POST',
     body: JSON.stringify(data),
   });
 
 export const getTasks = (taskListId: string) =>
   request<Task[]>(`/tasks?taskListId=${taskListId}`);
+
+export const getTasksByTaskList = (taskListId: string) =>
+  request<Task[]>(`/tasks?taskListId=${taskListId}`);
+
+export const getTasksByProject = (projectId: string) =>
+  request<Task[]>(`/tasks?projectId=${projectId}`);
 
 export const updateTask = (id: string, data: Partial<Task>) =>
   request<Task>(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
