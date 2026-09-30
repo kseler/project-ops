@@ -1,8 +1,8 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
-import { createTaskList } from '../lib/api';
-import { useProjectDetail } from '../lib/store';
+import { useCreateTaskList, useTaskLists } from '@/queries/taskLists';
+
 import { TaskListView } from './TaskListView';
 
 interface Props {
@@ -10,22 +10,24 @@ interface Props {
 }
 
 export function ProjectListView({ projectId }: Props) {
-  const { taskLists, addTaskList } = useProjectDetail();
   const [addingList, setAddingList] = useState(false);
   const [newListName, setNewListName] = useState('');
-  const [busy, setBusy] = useState(false);
+
+  const {
+    data: taskLists,
+  } = useTaskLists(projectId);
+
+  const createTaskListMutation = useCreateTaskList();
 
   const handleAddList = async () => {
-    if (!newListName.trim() || busy) return;
-    setBusy(true);
-    try {
-      const list = await createTaskList(projectId, newListName.trim());
-      addTaskList(list);
-      setNewListName('');
-      setAddingList(false);
-    } finally {
-      setBusy(false);
-    }
+    if (!newListName.trim()) return;
+
+    await createTaskListMutation.mutateAsync({
+      projectId,
+      name: newListName.trim(),
+    }, {
+      onSettled: () => cancelAdd(),
+    });
   };
 
   const cancelAdd = () => {
@@ -35,7 +37,7 @@ export function ProjectListView({ projectId }: Props) {
 
   return (
     <div className="space-y-4">
-      {taskLists.map((tl) => (
+      {taskLists?.map((tl) => (
         <TaskListView key={tl.id} taskList={tl} />
       ))}
 
@@ -56,7 +58,7 @@ export function ProjectListView({ projectId }: Props) {
             <div className="flex gap-2 mt-3">
               <button
                 onClick={handleAddList}
-                disabled={busy}
+                disabled={createTaskListMutation.isPending}
                 className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
               >
                 Add list
