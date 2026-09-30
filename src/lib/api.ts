@@ -54,9 +54,6 @@ export const createTask = (data: {
     body: JSON.stringify(data),
   });
 
-export const getTasks = (taskListId: string) =>
-  request<Task[]>(`/tasks?taskListId=${taskListId}`);
-
 export const getTasksByTaskList = (taskListId: string) =>
   request<Task[]>(`/tasks?taskListId=${taskListId}`);
 
