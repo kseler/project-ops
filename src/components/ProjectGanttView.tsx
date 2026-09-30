@@ -1,7 +1,10 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
-import { updateTask } from '../lib/api';
+import { useTaskLists } from '@/queries/taskLists';
+import { taskKeys, updateTaskInCache, useTasksByProject, useUpdateTask } from '@/queries/tasks';
+
 import {
   addDays,
   applyDragOffset,
@@ -11,7 +14,6 @@ import {
   SEGMENT_HEIGHT,
   SEGMENT_WIDTH,
 } from '../lib/ganttUtils';
-import { useProjectDetail } from '../lib/store';
 import type { Task, TaskList } from '../lib/types';
 import { useDragHandler } from '../lib/useDragHandler';
 import { GanttTaskBar } from './GanttTaskBar';
@@ -45,9 +47,17 @@ const MONTHS = [
 const DRAG_IDS = ['task-move', 'task-resize-left', 'task-resize-right'] as const;
 
 type Row = { kind: 'header'; taskList: TaskList } | { kind: 'task'; task: Task };
+interface Props {
+  projectId: string;
+}
 
-export function ProjectGanttView() {
-  const { taskLists, patchTask } = useProjectDetail();
+export function ProjectGanttView({ projectId }: Props) {
+  const { data: taskLists = [] } = useTaskLists(projectId);
+  const { data: tasks = [] } = useTasksByProject(projectId);
+
+  const updateTaskMutation = useUpdateTask();
+
+  const queryClient = useQueryClient();
 
   const today = useMemo(() => {
     const t = new Date();
@@ -62,14 +72,18 @@ export function ProjectGanttView() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const adjusting = useRef(false);
 
-  const rows = useMemo<Row[]>(
-    () =>
-      taskLists.flatMap((tl) => [
-        { kind: 'header' as const, taskList: tl },
-        ...tl.tasks.map((task) => ({ kind: 'task' as const, task })),
-      ]),
-    [taskLists],
-  );
+  const rows = taskLists.reduce<Row[]>((acc, taskList) => {
+    const taskListTasks = tasks
+      .filter(({taskListId}) => taskListId === taskList.id)
+      .map((task) => ({ kind: 'task' as const, task }));
+
+    acc.push(
+      { kind: 'header' as const, taskList },
+      ...taskListTasks
+    );
+
+    return acc;
+  }, []);
 
   const totalDays = useMemo(
     () => daysBetween(renderStart, renderEnd),
@@ -196,19 +210,30 @@ export function ProjectGanttView() {
   // onDrag computes from the original dates + pointer delta and writes straight to the store.
   // onDragEnd uses the same snapshot + final delta to persist to the server.
 
-  useDragHandler({
+  useDragHandler<Task>({
     onDragStart(drag) {
       return (DRAG_IDS as readonly string[]).includes(drag.dragId);
     },
     onDrag(drag) {
-      const task = drag.object as Task;
+      const task = drag.object;
       const offsetDays = Math.round(
         (drag.currentPointerX - drag.initialPointerX) / SEGMENT_WIDTH,
       );
-      patchTask(applyDragOffset(task, drag.dragId, offsetDays));
+
+      const updatedTask = applyDragOffset(
+        task,
+        drag.dragId,
+        offsetDays,
+      );
+
+      updateTaskInCache(
+        queryClient,
+        taskKeys.byProject(projectId),
+        updatedTask,
+      );
     },
     onDragEnd(drag) {
-      const task = drag.object as Task;
+      const task = drag.object;
       const offsetDays = Math.round(
         (drag.currentPointerX - drag.initialPointerX) / SEGMENT_WIDTH,
       );
@@ -218,7 +243,16 @@ export function ProjectGanttView() {
 
       if (updated === task) return;
 
-      updateTask(task.id, { ...updated }).catch(console.error);
+      updateTaskMutation.mutate(
+        updated, {
+        onSuccess: (updatedTask) => {
+          updateTaskInCache(
+            queryClient,
+            taskKeys.byProject(projectId),
+            updatedTask,
+          );
+        }}
+      );
     },
   });
 
