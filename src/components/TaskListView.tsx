@@ -1,8 +1,8 @@
 import { Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { createTask } from '../lib/api';
-import { useProjectDetail } from '../lib/store';
+import { useCreateTask, useTasksByTaskList} from '@/queries/tasks';
+
 import type { TaskList } from '../lib/types';
 import { TaskItem } from './TaskItem';
 
@@ -11,32 +11,26 @@ interface Props {
 }
 
 export function TaskListView({ taskList }: Props) {
-  const { addTask, getTasks} = useProjectDetail();
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newStartDate, setNewStartDate] = useState('');
   const [newDueDate, setNewDueDate] = useState('');
-  const [busy, setBusy] = useState(false);
 
-   useEffect(() => {
-      if (!taskList.id) return;
-      getTasks(taskList.id);
-    }, [getTasks, taskList.id]);
+  const {data: tasks} = useTasksByTaskList(taskList.id);
+
+  const createTaskMutation = useCreateTask();
 
   const handleAdd = async () => {
-    if (!newName.trim() || busy) return;
-    setBusy(true);
-    try {
-      const task = await createTask(taskList.id, {
-        name: newName.trim(),
-        startDate: newStartDate || undefined,
-        dueDate: newDueDate || undefined,
-      });
-      addTask(taskList.id, task);
-      resetForm();
-    } finally {
-      setBusy(false);
-    }
+    if (!newName.trim()) return;
+
+    await createTaskMutation.mutateAsync({
+      taskListId: taskList.id,
+      name: newName.trim(),
+      startDate: newStartDate,
+      dueDate: newDueDate
+    }, {
+      onSettled: () => resetForm(),
+    });
   };
 
   const resetForm = () => {
@@ -46,7 +40,7 @@ export function TaskListView({ taskList }: Props) {
     setNewDueDate('');
   };
 
-  const done = taskList.tasks?.filter((t) => t.status === 'done')?.length ?? 0;
+  const done = tasks?.filter((t) => t.status === 'done')?.length ?? 0;
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -55,7 +49,7 @@ export function TaskListView({ taskList }: Props) {
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-800">{taskList.name}</h3>
           <span className="text-xs text-slate-400">
-            {done}/{taskList?.tasks?.length ?? 0}
+            {done}/{tasks?.length ?? 0}
           </span>
         </div>
         <button
@@ -68,10 +62,10 @@ export function TaskListView({ taskList }: Props) {
 
       {/* Tasks */}
       <div className="divide-y divide-slate-50">
-        {taskList?.tasks?.length === 0 && !adding && (
+        {tasks?.length === 0 && !adding && (
           <p className="px-4 py-4 text-xs text-slate-400">No tasks yet.</p>
         )}
-        {taskList.tasks?.map((task) => (
+        {tasks?.map((task) => (
           <TaskItem key={task.id} task={task} />
         ))}
       </div>
@@ -116,7 +110,7 @@ export function TaskListView({ taskList }: Props) {
           <div className="flex gap-2">
             <button
               onClick={handleAdd}
-              disabled={busy}
+              disabled={createTaskMutation.isPending}
               className="text-xs px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
             >
               Add

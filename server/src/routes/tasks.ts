@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, getTableColumns } from 'drizzle-orm';
 import { Request, Response,Router } from 'express';
 import z from 'zod';
 
@@ -7,9 +7,19 @@ import { taskLists, taskPriorityEnum, tasks, taskStatusEnum } from '../db/schema
 
 const nullableDate = z.iso.date().nullable();
 
-export const getTasksQuerySchema = z.object({
-  taskListId: z.uuid(),
-});
+export const getTasksQuerySchema = z
+  .object({
+    taskListId: z.uuid().optional(),
+    projectId: z.uuid().optional(),
+  })
+  .refine(
+    (data) =>
+      (data.taskListId && !data.projectId) ||
+      (data.projectId && !data.taskListId),
+    {
+      message: 'Provide either taskListId or projectId',
+    },
+  );
 
 export const taskIdParamsSchema = z.object({
   id: z.uuid(),
@@ -70,12 +80,27 @@ router.get('/', async (req: Request, res: Response) => {
         });
       }
 
-    const { taskListId } = parsedQuery.data;
+    const { taskListId, projectId } = parsedQuery.data;
+
+     if (taskListId) {
+      const result = await db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.taskListId, taskListId));
+
+      return res.json(result);
+    }
 
     const result = await db
-      .select()
+      .select({
+        ...getTableColumns(tasks),
+      })
       .from(tasks)
-      .where(eq(tasks.taskListId, taskListId));
+      .innerJoin(
+        taskLists,
+        eq(tasks.taskListId, taskLists.id),
+      )
+      .where(eq(taskLists.projectId, projectId!));
 
     return res.json(result);
   } catch (error) {
