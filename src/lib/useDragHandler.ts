@@ -1,28 +1,24 @@
 import { useEffect, useRef } from 'react';
 
-export interface DragObject {
-  [key: string]: unknown;
-}
-
-export interface DragState {
+export interface DragState<TObject = unknown>  {
   dragId: string;
   element: Element;
-  object: DragObject;
+  object: TObject;
   initialPointerX: number;
   initialPointerY: number;
   currentPointerX: number;
   currentPointerY: number;
 }
 
-export interface DragHandlerCallbacks {
-  onDragStart?: (drag: DragState) => boolean;
-  onDrag?: (drag: DragState) => void;
-  onDragEnd?: (drag: DragState) => void;
+export interface DragHandlerCallbacks<TObject = unknown>  {
+  onDragStart?: (drag: DragState<TObject>) => boolean;
+  onDrag?: (drag: DragState<TObject>) => void;
+  onDragEnd?: (drag: DragState<TObject>) => void;
 }
 
 const DRAG_THRESHOLD = 3;
 
-export function useDragHandler(callbacks: DragHandlerCallbacks): void {
+export function useDragHandler<TObject = unknown>(callbacks: DragHandlerCallbacks<TObject>): void {
   const cbRef = useRef(callbacks);
   cbRef.current = callbacks;
 
@@ -30,13 +26,13 @@ export function useDragHandler(callbacks: DragHandlerCallbacks): void {
     type Pending = {
       element: Element;
       dragId: string;
-      object: DragObject;
+      object: TObject;
       startX: number;
       startY: number;
     };
 
     let pending: Pending | null = null;
-    let active: DragState | null = null;
+    let active: DragState<TObject>| null = null;
 
     function onMouseDown(e: MouseEvent) {
       let el: Element | null = e.target as Element;
@@ -47,7 +43,7 @@ export function useDragHandler(callbacks: DragHandlerCallbacks): void {
           pending = {
             element: el,
             dragId,
-            object: raw ? (JSON.parse(raw) as DragObject) : {},
+            object: raw ? (JSON.parse(raw)) : {},
             startX: e.clientX,
             startY: e.clientY,
           };
@@ -65,7 +61,7 @@ export function useDragHandler(callbacks: DragHandlerCallbacks): void {
         const dy = Math.abs(e.clientY - pending.startY);
         if (dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) return;
 
-        const drag: DragState = {
+        const drag: DragState<TObject> = {
           dragId: pending.dragId,
           element: pending.element,
           object: pending.object,
