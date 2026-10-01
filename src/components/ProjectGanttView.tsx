@@ -93,7 +93,7 @@ export function ProjectGanttView({ projectId }: Props) {
     [renderStart, renderEnd],
   );
   const timelineWidth = totalDays * SEGMENT_WIDTH;
-  const timelineHeight = rows.length * SEGMENT_HEIGHT;
+  const rowsHeight = rows.length * SEGMENT_HEIGHT;
 
   const todayDayIndex = useMemo(
     () => daysBetween(renderStart, today),
@@ -141,8 +141,8 @@ export function ProjectGanttView({ projectId }: Props) {
   }, [renderStart, totalDays, todayDayIndex]);
 
   const gridStyle = useMemo(
-    () => getTimelineGridStyle(totalDays, rows.length),
-    [totalDays, rows.length],
+    () => getTimelineGridStyle(totalDays),
+    [totalDays],
   );
 
   // ── Virtual window ─────────────────────────────────────────────────────────
@@ -260,21 +260,21 @@ export function ProjectGanttView({ projectId }: Props) {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex border border-slate-200 rounded-lg overflow-hidden bg-white">
+    <div className="flex h-full border border-slate-200 rounded-lg overflow-hidden bg-white">
       {/* ── Left panel ───────────────────────────────────────────────────────── */}
       <div
         style={{ width: LEFT_PANEL_WIDTH }}
-        className="shrink-0 border-r border-slate-200 bg-white z-10"
+        className="shrink-0 border-r border-slate-200 bg-white z-10 flex flex-col h-full"
       >
         <div
           style={{ height: DATE_HEADER_HEIGHT }}
-          className="border-b border-slate-200 bg-slate-50"
+          className="shrink-0 border-b border-slate-200 bg-slate-50"
         />
         {rows.map((row, i) => (
           <div
             key={i}
             style={{ height: SEGMENT_HEIGHT }}
-            className={`flex items-center px-3 border-b border-slate-100 overflow-hidden ${
+            className={`shrink-0 flex items-center px-3 border-b border-slate-100 overflow-hidden ${
               row.kind === 'header' ? 'bg-slate-50' : 'bg-white'
             }`}
           >
@@ -293,87 +293,92 @@ export function ProjectGanttView({ projectId }: Props) {
             )}
           </div>
         ))}
+
+        <div className="flex-1">
+          {rows.length === 0 && (
+            <p className="px-4 py-5 text-xs text-slate-400">No task lists yet.</p>
+          )}
+        </div>
       </div>
 
       {/* ── Timeline ─────────────────────────────────────────────────────────── */}
-      <div ref={scrollRef} className="flex-1 overflow-x-auto" onScroll={handleScroll}>
-        {/* Date header */}
+      <div ref={scrollRef} className="flex-1 overflow-x-auto h-full" onScroll={handleScroll}>
         <div
-          className="relative border-b border-slate-200"
-          style={{ width: timelineWidth, height: DATE_HEADER_HEIGHT }}
+          style={{ width: timelineWidth, minHeight: rowsHeight + DATE_HEADER_HEIGHT }}
+          className="flex flex-col h-full"
         >
-          {/* Month row */}
+          {/* Date header */}
           <div
-            className="absolute inset-x-0 top-0 bg-slate-100 border-b border-slate-200"
-            style={{ height: MONTH_ROW_HEIGHT }}
+            className="relative border-b border-slate-200 shrink-0"
+            style={{ height: DATE_HEADER_HEIGHT }}
           >
-            {monthSegments.map(({ left, width, label }) => (
-              <div
-                key={left}
-                className="absolute inset-y-0 flex items-center px-2 border-r border-slate-200 overflow-hidden"
-                style={{ left, width }}
-              >
-                <span className="text-xs font-semibold text-slate-600 truncate">
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Day row — only visible window rendered */}
-          <div
-            className="absolute inset-x-0 bg-slate-50 border-b border-slate-200"
-            style={{ top: MONTH_ROW_HEIGHT, height: DAY_ROW_HEIGHT }}
-          >
+            {/* Month row */}
             <div
-              className="absolute inset-y-0 bg-indigo-100"
-              style={{ left: todayLeft, width: SEGMENT_WIDTH }}
-            />
-            {visibleDayLabels.map(({ left, label, isToday }) => (
-              <div
-                key={left}
-                className="absolute inset-y-0 flex items-center justify-center border-r border-slate-100"
-                style={{ left, width: SEGMENT_WIDTH }}
-              >
-                <span
-                  className={`text-xs leading-none ${isToday ? 'font-bold text-indigo-600' : 'text-slate-400'}`}
+              className="absolute inset-x-0 top-0 bg-slate-100 border-b border-slate-200"
+              style={{ height: MONTH_ROW_HEIGHT }}
+            >
+              {monthSegments.map(({ left, width, label }) => (
+                <div
+                  key={left}
+                  className="absolute inset-y-0 flex items-center px-2 border-r border-slate-200 overflow-hidden"
+                  style={{ left, width }}
                 >
-                  {label}
-                </span>
-              </div>
-            ))}
+                  <span className="text-xs font-semibold text-slate-600 truncate">
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Day row — only visible window rendered */}
+            <div
+              className="absolute inset-x-0 bg-slate-50 border-b border-slate-200"
+              style={{ top: MONTH_ROW_HEIGHT, height: DAY_ROW_HEIGHT }}
+            >
+              <div
+                className="absolute inset-y-0 bg-indigo-100"
+                style={{ left: todayLeft, width: SEGMENT_WIDTH }}
+              />
+              {visibleDayLabels.map(({ left, label, isToday }) => (
+                <div
+                  key={left}
+                  className="absolute inset-y-0 flex items-center justify-center border-r border-slate-100"
+                  style={{ left, width: SEGMENT_WIDTH }}
+                >
+                  <span
+                    className={`text-xs leading-none ${isToday ? 'font-bold text-indigo-600' : 'text-slate-400'}`}
+                  >
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Grid */}
-        <div style={gridStyle}>
-          {/* Today column tint */}
-          <div
-            className="absolute top-0 bg-indigo-50 pointer-events-none"
-            style={{
-              left: todayLeft,
-              width: SEGMENT_WIDTH,
-              height: timelineHeight,
-              opacity: 0.6,
-            }}
-          />
-          {/* Today center line */}
-          <div
-            className="absolute top-0 bg-indigo-300 pointer-events-none"
-            style={{
-              left: todayLeft + Math.floor(SEGMENT_WIDTH / 2),
-              width: 1,
-              height: timelineHeight,
-            }}
-          />
+          <div className="flex-1 relative">
+            <div
+              style={{ ...gridStyle, height: '100%', minHeight: rowsHeight }}
+            >
+              {/* Today column tint */}
+              <div
+                className="absolute top-0 bg-indigo-50 pointer-events-none"
+                style={{ left: todayLeft, width: SEGMENT_WIDTH, height: '100%', opacity: 0.6 }}
+              />
+              {/* Today center line */}
+              <div
+                className="absolute top-0 bg-indigo-300 pointer-events-none"
+                style={{ left: todayLeft + Math.floor(SEGMENT_WIDTH / 2), width: 1, height: '100%' }}
+              />
 
-          {/* Task entries */}
-          {rows.map((row, i) => {
-            if (row.kind !== 'task') return null;
-            const style = getEntryStyle(row.task, renderStart, i);
-            if (!style) return null;
-            return <GanttTaskBar key={row.task.id} task={row.task} style={style} projectId={projectId} />;
-          })}
+              {/* Task entries */}
+              {rows.map((row, i) => {
+                if (row.kind !== 'task') return null;
+                const style = getEntryStyle(row.task, renderStart, i);
+                if (!style) return null;
+                return <GanttTaskBar key={row.task.id} task={row.task} style={style} projectId={projectId} />;
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>

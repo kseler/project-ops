@@ -51,7 +51,7 @@ export function getRenderingDates(viewportWidth: number): { start: Date; end: Da
  *   - 1px vertical lines every SEGMENT_WIDTH px  (day columns)
  *   - 1px horizontal lines every SEGMENT_HEIGHT px (row separators)
  */
-export function getTimelineGridStyle(totalDays: number, rowCount: number): CSSProperties {
+export function getTimelineGridStyle(totalDays: number): CSSProperties {
   const vLine = `repeating-linear-gradient(
     to right,
     transparent,
@@ -69,9 +69,7 @@ export function getTimelineGridStyle(totalDays: number, rowCount: number): CSSPr
   return {
     backgroundImage: `${vLine}, ${hLine}`,
     width: totalDays * SEGMENT_WIDTH,
-    height: rowCount * SEGMENT_HEIGHT,
     position: 'relative',
-    flexShrink: 0,
   };
 }
 

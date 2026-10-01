@@ -42,58 +42,49 @@ export function ProjectDetail() {
   // const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
   return (
-    <div className="px-8 py-8">
-      <Link
-        to="/projects"
-        className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 mb-6 transition-colors"
-      >
-        <ArrowLeft size={14} /> Projects
-      </Link>
-
-      <div className="flex items-start justify-between mb-2">
-        <h1 className="text-xl font-bold text-slate-900 leading-tight">{project.name}</h1>
-        <span
-          className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusBadge[project.status]}`}
+    <div className={view === 'gantt' ? 'h-full flex flex-col' : 'px-8 py-8'}>
+      <div className={view === 'gantt' ? 'px-8 pt-8 shrink-0' : ''}>
+        <Link
+          to="/projects"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 mb-6 transition-colors"
         >
-          {project.status}
-        </span>
-      </div>
-      <p className="text-sm text-slate-500 mb-5">{project.description}</p>
+          <ArrowLeft size={14} /> Projects
+        </Link>
 
-      {/* <div className="mb-6">
-        <div className="flex justify-between text-xs text-slate-500 mb-1.5">
-          <span>
-            {doneTasks} of {totalTasks} tasks complete
-          </span>
-          <span>{progress}%</span>
-        </div>
-        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-indigo-500 rounded-full transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div> */}
-
-      <div className="flex items-center gap-1 mb-6 border-b border-slate-100">
-        {views.map(({ id: vid, label, icon }) => (
-          <button
-            key={vid}
-            onClick={() => setView(vid)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              view === vid
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
+        <div className="flex items-start justify-between mb-2">
+          <h1 className="text-xl font-bold text-slate-900 leading-tight">{project.name}</h1>
+          <span
+            className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusBadge[project.status]}`}
           >
-            {icon}
-            {label}
-          </button>
-        ))}
+            {project.status}
+          </span>
+        </div>
+        <p className="text-sm text-slate-500 mb-5">{project.description}</p>
+
+        <div className="flex items-center gap-1 mb-6 border-b border-slate-100">
+          {views.map(({ id: vid, label, icon }) => (
+            <button
+              key={vid}
+              onClick={() => setView(vid)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                view === vid
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {icon}
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {view === 'list' && <ProjectListView projectId={projectId!} />}
-      {view === 'gantt' && <ProjectGanttView  projectId={projectId!} />}
+      {view === 'gantt' && (
+        <div className="flex-1 min-h-0 px-8 pb-8">
+          <ProjectGanttView projectId={projectId!} />
+        </div>
+      )}
 
       <Outlet />
     </div>
