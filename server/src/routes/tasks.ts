@@ -112,6 +112,31 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/tasks/:id
+router.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const parsedParams = taskIdParamsSchema.safeParse(req.params);
+
+    if (!parsedParams.success) {
+      return res.status(400).json({ error: parsedParams.error.issues });
+    }
+
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, parsedParams.data.id));
+
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    return res.json(task);
+  } catch (error) {
+    console.error('Failed to fetch task', error);
+    return res.status(500).json({ error: 'Failed to fetch task' });
+  }
+});
+
 // POST /api/tasks
 router.post('/', async (req: Request, res: Response) => {
   try {

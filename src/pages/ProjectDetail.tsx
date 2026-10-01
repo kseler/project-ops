@@ -1,6 +1,6 @@
 import { ArrowLeft, GanttChart, LayoutList } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Outlet, useParams } from 'react-router-dom';
 
 import { useProject } from '@/queries/projects';
 
@@ -94,6 +94,8 @@ export function ProjectDetail() {
 
       {view === 'list' && <ProjectListView projectId={projectId!} />}
       {view === 'gantt' && <ProjectGanttView  projectId={projectId!} />}
+
+      <Outlet />
     </div>
   );
 }
