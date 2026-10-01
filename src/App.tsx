@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { Layout } from './components/Layout';
 import { TaskDrawer } from './components/TaskDrawer';
+import { Toaster } from './components/Toaster';
 import { Dashboard } from './pages/Dashboard';
 import { ProjectDetail } from './pages/ProjectDetail';
 import { Projects } from './pages/Projects';
@@ -13,6 +14,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <Toaster />
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
