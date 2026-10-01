@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Calendar, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 
 import { removeTaskFromCache, taskKeys, updateTaskInCache, useDeleteTask, useUpdateTask } from '@/queries/tasks';
 
@@ -42,6 +43,7 @@ interface Props {
 }
 
 export function TaskItem({ task }: Props) {
+  const { id: projectId } = useParams<{ id: string }>();
   const [editingDates, setEditingDates] = useState(false);
   const [startDate, setStartDate] = useState(task.startDate ?? '');
   const [dueDate, setDueDate] = useState(task.dueDate ?? '');
@@ -147,10 +149,13 @@ export function TaskItem({ task }: Props) {
           )}
         </button>
 
-        <span
-          className={`flex-1 text-sm ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}
-        >
-          {task.name}
+        <span className="flex-1 min-w-0">
+          <Link
+            to={`/projects/${projectId}/tasks/${task.id}`}
+            className={`text-sm hover:underline hover:text-indigo-600 transition-colors ${task.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}
+          >
+            {task.name}
+          </Link>
         </span>
 
         <button
