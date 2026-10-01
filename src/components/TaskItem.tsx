@@ -3,6 +3,7 @@ import { Calendar, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { addToast } from '@/lib/toast';
 import { removeTaskFromCache, taskKeys, updateTaskInCache, useDeleteTask, useUpdateTask } from '@/queries/tasks';
 
 import type { Task } from '../lib/types';
@@ -87,6 +88,7 @@ export function TaskItem({ task }: Props) {
       onSuccess: () => {
         removeTaskFromCache(queryClient, taskKeys.byTaskList(task.taskListId), task.id);
         setConfirmDelete(false);
+        addToast('Task deleted');
       },
     });
   };

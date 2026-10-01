@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
+import { addToast } from '@/lib/toast';
 import { hasErrors, validateProject } from '@/lib/validation';
 import { useCreateProject, useProjects } from '@/queries/projects';
 
@@ -34,6 +35,7 @@ export function Projects() {
       description: form.description.trim() || undefined,
       dueDate: form.dueDate,
     }, {
+      onSuccess: () => addToast('Project created'),
       onSettled: () => { setForm(null); setFormErrors({}); },
     });
   };

@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
+import { addToast } from '@/lib/toast';
 import { hasErrors, validateTask } from '@/lib/validation';
 import { useCreateTask, useTasksByTaskList } from '@/queries/tasks';
 
@@ -32,6 +33,7 @@ export function TaskListView({ taskList }: Props) {
       startDate: newStartDate || undefined,
       dueDate: newDueDate || undefined,
     }, {
+      onSuccess: () => addToast('Task created'),
       onSettled: () => resetForm(),
     });
   };

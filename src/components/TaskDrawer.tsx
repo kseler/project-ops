@@ -6,6 +6,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { taskKeys, updateTaskInCache, useDeleteTask, useTask, useUpdateTask } from '@/queries/tasks';
 import { removeTaskFromCache } from '@/queries/tasks';
 
+import { addToast } from '../lib/toast';
 import type { Task, TaskPriority, TaskStatus } from '../lib/types';
 import { validateTask } from '../lib/validation';
 import { ConfirmModal } from './ConfirmModal';
@@ -113,6 +114,7 @@ export function TaskDrawer() {
       onSuccess: () => {
         removeTaskFromCache(queryClient, taskKeys.byTaskList(task.taskListId), task.id);
         setConfirmDelete(false);
+        addToast('Task deleted');
         close();
       },
     });
