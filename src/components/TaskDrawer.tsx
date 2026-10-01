@@ -113,6 +113,7 @@ export function TaskDrawer() {
     deleteTaskMutation.mutate(task.id, {
       onSuccess: () => {
         removeTaskFromCache(queryClient, taskKeys.byTaskList(task.taskListId), task.id);
+        if (projectId) removeTaskFromCache(queryClient, taskKeys.byProject(projectId), task.id);
         setConfirmDelete(false);
         addToast('Task deleted');
         close();
