@@ -7,6 +7,7 @@ import { taskKeys, updateTaskInCache, useDeleteTask, useTask, useUpdateTask } fr
 import { removeTaskFromCache } from '@/queries/tasks';
 
 import type { Task, TaskPriority, TaskStatus } from '../lib/types';
+import { ConfirmModal } from './ConfirmModal';
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'todo', label: 'To do' },
@@ -99,11 +100,14 @@ export function TaskDrawer() {
     });
   };
 
-  const handleDelete = () => {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const confirmAndDelete = () => {
     if (!task) return;
     deleteTaskMutation.mutate(task.id, {
       onSuccess: () => {
         removeTaskFromCache(queryClient, taskKeys.byTaskList(task.taskListId), task.id);
+        setConfirmDelete(false);
         close();
       },
     });
@@ -151,7 +155,7 @@ export function TaskDrawer() {
                   </svg>
                 )}
                 <button
-                  onClick={handleDelete}
+                  onClick={() => setConfirmDelete(true)}
                   disabled={deleteTaskMutation.isPending}
                   title="Delete task"
                   className="text-slate-300 hover:text-red-400 transition-colors disabled:opacity-50 p-1"
@@ -297,6 +301,17 @@ export function TaskDrawer() {
           </div>
         )}
       </div>
+
+      {confirmDelete && task && (
+        <ConfirmModal
+          title="Delete task"
+          message={`"${task.name}" will be permanently deleted.`}
+          confirmLabel="Delete"
+          danger
+          onConfirm={confirmAndDelete}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
     </>
   );
 }

@@ -6,6 +6,7 @@ import { Link, useParams } from 'react-router-dom';
 import { removeTaskFromCache, taskKeys, updateTaskInCache, useDeleteTask, useUpdateTask } from '@/queries/tasks';
 
 import type { Task } from '../lib/types';
+import { ConfirmModal } from './ConfirmModal';
 
 const priorityDot: Record<Task['priority'], string> = {
   high: 'bg-red-400',
@@ -54,6 +55,7 @@ export function TaskItem({ task }: Props) {
   const queryClient = useQueryClient();
 
   const busy = updateTaskMutation.isPending || deleteTaskMutation.isPending;
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const updateTaskListItem = (patch: Partial<Task> & { id: string }) => {
     return updateTaskMutation.mutate(patch, {
@@ -77,9 +79,14 @@ export function TaskItem({ task }: Props) {
 
   const handleDelete = () => {
     if (busy) return;
+    setConfirmDelete(true);
+  };
+
+  const confirmAndDelete = () => {
     deleteTaskMutation.mutate(task.id, {
       onSuccess: () => {
         removeTaskFromCache(queryClient, taskKeys.byTaskList(task.taskListId), task.id);
+        setConfirmDelete(false);
       },
     });
   };
@@ -224,6 +231,17 @@ export function TaskItem({ task }: Props) {
             </button>
           </div>
         </div>
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          title="Delete task"
+          message={`"${task.name}" will be permanently deleted.`}
+          confirmLabel="Delete"
+          danger
+          onConfirm={confirmAndDelete}
+          onCancel={() => setConfirmDelete(false)}
+        />
       )}
     </div>
   );
