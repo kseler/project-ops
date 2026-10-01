@@ -1,5 +1,6 @@
 import { GripVertical } from 'lucide-react';
 import type { CSSProperties } from 'react';
+import { Link } from 'react-router-dom';
 
 import { toISO } from '../lib/ganttUtils';
 import type { Task } from '../lib/types';
@@ -8,6 +9,7 @@ import { DragHandle } from './DragHandle';
 interface Props {
   task: Task;
   style: CSSProperties;
+  projectId: string;
 }
 
 function entryClass(task: Task, todayStr: string): string {
@@ -19,7 +21,7 @@ function entryClass(task: Task, todayStr: string): string {
 
 const todayStr = toISO(new Date());
 
-export function GanttTaskBar({ task, style }: Props) {
+export function GanttTaskBar({ task, style, projectId }: Props) {
   const dragObject = task as unknown as Record<string, unknown>;
 
   return (
@@ -38,7 +40,13 @@ export function GanttTaskBar({ task, style }: Props) {
         <GripVertical size={9} />
       </DragHandle>
 
-      <span className="truncate px-3">{task.name}</span>
+      <Link
+        to={`/projects/${projectId}/tasks/${task.id}`}
+        onClick={(e) => e.stopPropagation()}
+        className="truncate px-3 hover:underline"
+      >
+        {task.name}
+      </Link>
 
       <DragHandle
         dragId="task-resize-right"

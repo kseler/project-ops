@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
+import { Link } from 'react-router-dom';
 
 import { useTaskLists } from '@/queries/taskLists';
 import { taskKeys, updateTaskInCache, useTasksByProject, useUpdateTask } from '@/queries/tasks';
@@ -282,9 +283,13 @@ export function ProjectGanttView({ projectId }: Props) {
                 {row.taskList.name}
               </span>
             ) : (
-              <span className="text-sm text-slate-600 pl-3 truncate">
+              <Link
+                to={`/projects/${projectId}/tasks/${row.task.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-sm text-slate-600 pl-3 truncate hover:underline hover:text-indigo-600 transition-colors"
+              >
                 {row.task.name}
-              </span>
+              </Link>
             )}
           </div>
         ))}
@@ -367,7 +372,7 @@ export function ProjectGanttView({ projectId }: Props) {
             if (row.kind !== 'task') return null;
             const style = getEntryStyle(row.task, renderStart, i);
             if (!style) return null;
-            return <GanttTaskBar key={row.task.id} task={row.task} style={style} />;
+            return <GanttTaskBar key={row.task.id} task={row.task} style={style} projectId={projectId} />;
           })}
         </div>
       </div>
