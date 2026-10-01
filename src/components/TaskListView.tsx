@@ -1,7 +1,8 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
-import { useCreateTask, useTasksByTaskList} from '@/queries/tasks';
+import { hasErrors, validateTask } from '@/lib/validation';
+import { useCreateTask, useTasksByTaskList } from '@/queries/tasks';
 
 import type { TaskList } from '../lib/types';
 import { TaskItem } from './TaskItem';
@@ -15,19 +16,21 @@ export function TaskListView({ taskList }: Props) {
   const [newName, setNewName] = useState('');
   const [newStartDate, setNewStartDate] = useState('');
   const [newDueDate, setNewDueDate] = useState('');
+  const [taskErrors, setTaskErrors] = useState<{ name?: string; dueDate?: string }>({});
 
   const {data: tasks} = useTasksByTaskList(taskList.id);
 
   const createTaskMutation = useCreateTask();
 
   const handleAdd = async () => {
-    if (!newName.trim()) return;
+    const errors = validateTask({ name: newName, startDate: newStartDate, dueDate: newDueDate });
+    if (hasErrors(errors)) { setTaskErrors(errors); return; }
 
     await createTaskMutation.mutateAsync({
       taskListId: taskList.id,
       name: newName.trim(),
-      startDate: newStartDate,
-      dueDate: newDueDate
+      startDate: newStartDate || undefined,
+      dueDate: newDueDate || undefined,
     }, {
       onSettled: () => resetForm(),
     });
@@ -38,6 +41,7 @@ export function TaskListView({ taskList }: Props) {
     setNewName('');
     setNewStartDate('');
     setNewDueDate('');
+    setTaskErrors({});
   };
 
   const done = tasks?.filter((t) => t.status === 'done')?.length ?? 0;
@@ -72,17 +76,20 @@ export function TaskListView({ taskList }: Props) {
 
       {adding && (
         <div className="px-3 py-2 border-t border-slate-100 space-y-2">
-          <input
-            autoFocus
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAdd();
-              if (e.key === 'Escape') resetForm();
-            }}
-            placeholder="Task name…"
-            className="w-full text-sm px-2 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          />
+          <div>
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => { setNewName(e.target.value); setTaskErrors((e) => ({ ...e, name: undefined })); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAdd();
+                if (e.key === 'Escape') resetForm();
+              }}
+              placeholder="Task name…"
+              className={`w-full text-sm px-2 py-1.5 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 ${taskErrors.name ? 'border-red-300' : 'border-slate-200'}`}
+            />
+            {taskErrors.name && <p className="text-xs text-red-500 mt-0.5">{taskErrors.name}</p>}
+          </div>
 
           <div className="flex flex-wrap gap-x-4 gap-y-1.5">
             <label className="flex items-center gap-1.5 text-xs text-slate-500">
@@ -95,16 +102,19 @@ export function TaskListView({ taskList }: Props) {
                 className="text-sm px-1.5 py-0.5 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 text-slate-700"
               />
             </label>
-            <label className="flex items-center gap-1.5 text-xs text-slate-500">
-              Due
-              <input
-                type="date"
-                value={newDueDate}
-                min={newStartDate || undefined}
-                onChange={(e) => setNewDueDate(e.target.value)}
-                className="text-sm px-1.5 py-0.5 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 text-slate-700"
-              />
-            </label>
+            <div className="flex flex-col gap-0.5">
+              <label className="flex items-center gap-1.5 text-xs text-slate-500">
+                Due
+                <input
+                  type="date"
+                  value={newDueDate}
+                  min={newStartDate || undefined}
+                  onChange={(e) => { setNewDueDate(e.target.value); setTaskErrors((e) => ({ ...e, dueDate: undefined })); }}
+                  className={`text-sm px-1.5 py-0.5 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-300 text-slate-700 ${taskErrors.dueDate ? 'border-red-300' : 'border-slate-200'}`}
+                />
+              </label>
+              {taskErrors.dueDate && <p className="text-xs text-red-500">{taskErrors.dueDate}</p>}
+            </div>
           </div>
 
           <div className="flex gap-2">

@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
+import { hasErrors, validateTaskList } from '@/lib/validation';
 import { useCreateTaskList, useTaskLists } from '@/queries/taskLists';
 
 import { TaskListView } from './TaskListView';
@@ -12,6 +13,7 @@ interface Props {
 export function ProjectListView({ projectId }: Props) {
   const [addingList, setAddingList] = useState(false);
   const [newListName, setNewListName] = useState('');
+  const [listNameError, setListNameError] = useState('');
 
   const {
     data: taskLists,
@@ -20,7 +22,8 @@ export function ProjectListView({ projectId }: Props) {
   const createTaskListMutation = useCreateTaskList();
 
   const handleAddList = async () => {
-    if (!newListName.trim()) return;
+    const errors = validateTaskList({ name: newListName });
+    if (hasErrors(errors)) { setListNameError(errors.name ?? ''); return; }
 
     await createTaskListMutation.mutateAsync({
       projectId,
@@ -33,6 +36,7 @@ export function ProjectListView({ projectId }: Props) {
   const cancelAdd = () => {
     setAddingList(false);
     setNewListName('');
+    setListNameError('');
   };
 
   return (
@@ -47,14 +51,15 @@ export function ProjectListView({ projectId }: Props) {
             <input
               autoFocus
               value={newListName}
-              onChange={(e) => setNewListName(e.target.value)}
+              onChange={(e) => { setNewListName(e.target.value); setListNameError(''); }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleAddList();
                 if (e.key === 'Escape') cancelAdd();
               }}
               placeholder="List name…"
-              className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              className={`w-full text-sm px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300 ${listNameError ? 'border-red-300' : 'border-slate-200'}`}
             />
+            {listNameError && <p className="text-xs text-red-500 mt-1">{listNameError}</p>}
             <div className="flex gap-2 mt-3">
               <button
                 onClick={handleAddList}

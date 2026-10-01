@@ -1,18 +1,20 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
+import { hasErrors, validateProject } from '@/lib/validation';
 import { useCreateProject, useProjects } from '@/queries/projects';
 
 import { ProjectCard } from '../components/ProjectCard';
 
 interface CreateProjectForm {
-  name?: string
-  description?: string
-  dueDate?: string
+  name: string
+  description: string
+  dueDate: string
 }
 
 export function Projects() {
   const [form, setForm] = useState<CreateProjectForm | null>(null);
+  const [formErrors, setFormErrors] = useState<Partial<CreateProjectForm>>({});
 
   const {
     data: projects = [],
@@ -23,14 +25,16 @@ export function Projects() {
   const createProjectMutation = useCreateProject();
 
   const handleCreate = async () => {
-    if (!form?.name?.trim() || !form.dueDate) return;
+    if (!form) return;
+    const errors = validateProject(form);
+    if (hasErrors(errors)) { setFormErrors(errors); return; }
 
     await createProjectMutation.mutateAsync({
       name: form.name.trim(),
-      description: form.description?.trim(),
-      dueDate: form.dueDate
+      description: form.description.trim() || undefined,
+      dueDate: form.dueDate,
     }, {
-      onSettled: () => setForm(null),
+      onSettled: () => { setForm(null); setFormErrors({}); },
     });
   };
 
@@ -45,7 +49,7 @@ export function Projects() {
           <p className="text-sm text-slate-500 mt-0.5">{projects.length} total</p>
         </div>
         <button
-          onClick={() => setForm({name: '', description: '', dueDate: ''})}
+          onClick={() => { setForm({ name: '', description: '', dueDate: '' }); setFormErrors({}); }}
           className="flex items-center gap-1.5 text-sm px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
         >
           <Plus size={15} /> New project
@@ -57,25 +61,31 @@ export function Projects() {
         <div className="bg-white border border-slate-200 rounded-lg p-5 mb-6">
           <h3 className="text-sm font-semibold text-slate-800 mb-4">New project</h3>
           <div className="space-y-3">
+            <div>
+              <input
+                autoFocus
+                value={form.name}
+                onChange={(e) => { setForm((f) => ({ ...f!, name: e.target.value })); setFormErrors((fe) => ({ ...fe, name: undefined })); }}
+                placeholder="Project name"
+                className={`w-full text-sm px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300 ${formErrors.name ? 'border-red-300' : 'border-slate-200'}`}
+              />
+              {formErrors.name && <p className="text-xs text-red-500 mt-1">{formErrors.name}</p>}
+            </div>
             <input
-              autoFocus
-              value={form?.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="Project name"
-              className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
-            <input
-              value={form?.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f!, description: e.target.value }))}
               placeholder="Description (optional)"
               className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
             />
-            <input
-              type="date"
-              value={form?.dueDate}
-              onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
-              className="text-sm px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
+            <div>
+              <input
+                type="date"
+                value={form.dueDate}
+                onChange={(e) => { setForm((f) => ({ ...f!, dueDate: e.target.value })); setFormErrors((fe) => ({ ...fe, dueDate: undefined })); }}
+                className={`text-sm px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300 ${formErrors.dueDate ? 'border-red-300' : 'border-slate-200'}`}
+              />
+              {formErrors.dueDate && <p className="text-xs text-red-500 mt-1">{formErrors.dueDate}</p>}
+            </div>
           </div>
           <div className="flex gap-2 mt-4">
             <button
@@ -86,7 +96,7 @@ export function Projects() {
               Create
             </button>
             <button
-              onClick={() => setForm(null)}
+              onClick={() => { setForm(null); setFormErrors({}); }}
               className="text-sm px-4 py-2 text-slate-600 hover:text-slate-900"
             >
               Cancel

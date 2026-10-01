@@ -7,6 +7,7 @@ import { taskKeys, updateTaskInCache, useDeleteTask, useTask, useUpdateTask } fr
 import { removeTaskFromCache } from '@/queries/tasks';
 
 import type { Task, TaskPriority, TaskStatus } from '../lib/types';
+import { validateTask } from '../lib/validation';
 import { ConfirmModal } from './ConfirmModal';
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
@@ -79,6 +80,8 @@ export function TaskDrawer() {
   const [name, setName] = useState(task?.name ?? '');
   const [description, setDescription] = useState('');
   const [assignee, setAssignee] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [dueDateError, setDueDateError] = useState('');
 
   // Sync local state when task loads
   const lastTaskId = useRef<string | null>(null);
@@ -89,6 +92,8 @@ export function TaskDrawer() {
       setName(task.name);
       setDescription(task.description ?? '');
       setAssignee(task.assignee ?? '');
+      setNameError('');
+      setDueDateError('');
     }
   }, [task]);
 
@@ -185,17 +190,22 @@ export function TaskDrawer() {
         )}
         {task && (
           <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-            <textarea
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={() => {
-                if (name.trim() && name.trim() !== task.name)
-                  save({ id: task.id, name: name.trim() });
-              }}
-              rows={2}
-              className="w-full text-lg font-semibold text-slate-900 resize-none focus:outline-none focus:ring-0 placeholder:text-slate-300 leading-snug"
-              placeholder="Task name"
-            />
+            <div>
+              <textarea
+                value={name}
+                onChange={(e) => { setName(e.target.value); if (nameError) setNameError(''); }}
+                onBlur={() => {
+                  const errors = validateTask({ name });
+                  if (errors.name) { setNameError(errors.name); return; }
+                  if (name.trim() !== task.name)
+                    save({ id: task.id, name: name.trim() });
+                }}
+                rows={2}
+                className={`w-full text-lg font-semibold text-slate-900 resize-none focus:outline-none focus:ring-0 placeholder:text-slate-300 leading-snug ${nameError ? 'text-red-500' : ''}`}
+                placeholder="Task name"
+              />
+              {nameError && <p className="text-xs text-red-500 mt-0.5">{nameError}</p>}
+            </div>
 
             <textarea
               value={description}
@@ -270,24 +280,33 @@ export function TaskDrawer() {
                 type="date"
                 value={task.startDate ?? ''}
                 max={task.dueDate ?? undefined}
-                onChange={(e) =>
-                  save({ id: task.id, startDate: e.target.value || undefined })
-                }
+                onChange={(e) => {
+                  const newStart = e.target.value || undefined;
+                  if (dueDateError) setDueDateError('');
+                  save({ id: task.id, startDate: newStart });
+                }}
                 className="text-sm text-slate-700 focus:outline-none border-b border-transparent hover:border-slate-200 focus:border-indigo-300 transition-colors py-0.5 bg-transparent"
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               <FieldLabel>Due</FieldLabel>
-              <input
-                type="date"
-                value={task.dueDate ?? ''}
-                min={task.startDate ?? undefined}
-                onChange={(e) =>
-                  save({ id: task.id, dueDate: e.target.value || undefined })
-                }
-                className="text-sm text-slate-700 focus:outline-none border-b border-transparent hover:border-slate-200 focus:border-indigo-300 transition-colors py-0.5 bg-transparent"
-              />
+              <div className="flex flex-col gap-0.5">
+                <input
+                  type="date"
+                  value={task.dueDate ?? ''}
+                  min={task.startDate ?? undefined}
+                  onChange={(e) => {
+                    const newDue = e.target.value || undefined;
+                    const errors = validateTask({ startDate: task.startDate ?? undefined, dueDate: newDue });
+                    if (errors.dueDate) { setDueDateError(errors.dueDate); return; }
+                    setDueDateError('');
+                    save({ id: task.id, dueDate: newDue });
+                  }}
+                  className={`text-sm text-slate-700 focus:outline-none border-b transition-colors py-0.5 bg-transparent ${dueDateError ? 'border-red-300' : 'border-transparent hover:border-slate-200 focus:border-indigo-300'}`}
+                />
+                {dueDateError && <p className="text-xs text-red-500">{dueDateError}</p>}
+              </div>
             </div>
 
           </div>
