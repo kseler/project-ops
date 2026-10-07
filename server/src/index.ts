@@ -5,6 +5,7 @@ import cors from 'cors';
 import express from 'express';
 
 import { auth } from './auth/auth.js';
+import { requireAuth } from './middleware/require-auth.js';
 import projectsRouter from './routes/projects.js';
 import tasklistsRouter from './routes/task-lists.js';
 import tasksRouter from './routes/tasks.js';
@@ -22,9 +23,9 @@ app.use(
 app.all('/api/auth/*splat', toNodeHandler(auth));
 app.use(express.json());
 
-app.use('/api/projects', projectsRouter);
-app.use('/api/task-lists', tasklistsRouter);
-app.use('/api/tasks', tasksRouter);
+app.use('/api/projects', requireAuth, projectsRouter);
+app.use('/api/task-lists', requireAuth, tasklistsRouter);
+app.use('/api/tasks', requireAuth, tasksRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
