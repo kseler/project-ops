@@ -1,5 +1,7 @@
-import { FolderKanban, LayoutDashboard } from 'lucide-react';
+import { FolderKanban, LayoutDashboard, LogOut } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
+
+import { authClient } from '../lib/auth-client';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -34,6 +36,15 @@ export function Layout() {
             </NavLink>
           ))}
         </nav>
+        <div className="px-3 py-4 border-t border-slate-700">
+          <button
+            onClick={() => authClient.signOut()}
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <LogOut size={16} />
+            Sign out
+          </button>
+        </div>
       </aside>
 
       <main className="flex-1 overflow-y-auto">
