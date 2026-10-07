@@ -1,8 +1,10 @@
 import 'dotenv/config';
 
+import { toNodeHandler } from 'better-auth/node';
 import cors from 'cors';
 import express from 'express';
 
+import { auth } from './auth/auth.js';
 import projectsRouter from './routes/projects.js';
 import tasklistsRouter from './routes/task-lists.js';
 import tasksRouter from './routes/tasks.js';
@@ -10,7 +12,14 @@ import tasksRouter from './routes/tasks.js';
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  }),
+);
+
+app.all('/api/auth/*splat', toNodeHandler(auth));
 app.use(express.json());
 
 app.use('/api/projects', projectsRouter);
