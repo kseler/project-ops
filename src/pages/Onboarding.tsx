@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
 import { authClient } from '../lib/auth-client';
@@ -7,11 +7,18 @@ export function Onboarding() {
   const [orgName, setOrgName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [awaitingOrg, setAwaitingOrg] = useState(false);
 
   const { data: session, isPending } = authClient.useSession();
   const navigate = useNavigate();
 
-  if (!isPending && session?.session.activeOrganizationId) {
+  useEffect(() => {
+    if (awaitingOrg && session?.session.activeOrganizationId) {
+      navigate('/', { replace: true });
+    }
+  }, [awaitingOrg, session?.session.activeOrganizationId, navigate]);
+
+  if (!isPending && !awaitingOrg && session?.session.activeOrganizationId) {
     return <Navigate to="/" replace />;
   }
 
@@ -39,9 +46,8 @@ export function Onboarding() {
 
     if (org) {
       await authClient.organization.setActive({ organizationId: org.id });
+      setAwaitingOrg(true);
     }
-
-    navigate('/', { replace: true });
   };
 
   return (
