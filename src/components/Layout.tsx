@@ -9,6 +9,8 @@ const navItems = [
 ];
 
 export function Layout() {
+  const { data: org } = authClient.useActiveOrganization();
+
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900">
       <aside className="w-56 shrink-0 bg-slate-900 flex flex-col">
@@ -16,6 +18,9 @@ export function Layout() {
           <span className="text-white font-semibold text-base tracking-tight">
             ProjectOps
           </span>
+          {org && (
+            <p className="text-slate-400 text-xs mt-0.5 truncate">{org.name}</p>
+          )}
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(({ to, label, icon: Icon, end }) => (

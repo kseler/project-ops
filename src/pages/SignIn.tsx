@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { authClient } from '../lib/auth-client';
 
@@ -8,22 +9,22 @@ export function SignIn() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    authClient.signIn.email({
-      email,
-      password,
-      fetchOptions: {
-        onRequest: () => setLoading(true),
-        onSuccess: () => setLoading(false),
-        onError: (ctx) => {
-          setError(ctx.error.message ?? 'Sign in failed.');
-          setLoading(false);
-        },
-      },
-    });
+    const { error: signInError } = await authClient.signIn.email({ email, password });
+
+    if (signInError) {
+      setError(signInError.message ?? 'Sign in failed.');
+      setLoading(false);
+      return;
+    }
+
+    navigate('/', { replace: true });
   };
 
   return (
@@ -81,6 +82,13 @@ export function SignIn() {
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        <p className="text-center text-xs text-slate-500 mt-5">
+          Don't have an account?{' '}
+          <Link to="/sign-up" className="text-indigo-600 hover:underline">
+            Sign up
+          </Link>
+        </p>
       </div>
     </div>
   );
