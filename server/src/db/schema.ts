@@ -11,6 +11,8 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+import { organization } from './auth-schema.js';
+
 export const projectStatusEnum = pgEnum('project_status', [
   'active',
   'on-hold',
@@ -57,7 +59,15 @@ export const projects = pgTable('projects', {
     withTimezone: true,
     mode: 'date',
   }),
-});
+
+  organizationId: text('organization_id')
+    .notNull()
+    .references(() => organization.id, {
+      onDelete: 'cascade',
+  }),
+},
+  (table) => [index('projects_organization_id_idx').on(table.organizationId)],
+);
 
 export const taskLists = pgTable(
   'task_lists',

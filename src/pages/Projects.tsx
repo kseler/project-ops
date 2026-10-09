@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { FolderOpen, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { addToast } from '@/lib/toast';
@@ -109,6 +109,16 @@ export function Projects() {
 
       {isLoading && <p className="text-sm text-slate-400">Loading…</p>}
       {error && <p className="text-sm text-red-400">{error.message}</p>}
+
+      {!isLoading && !error && projects.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+            <FolderOpen size={22} className="text-slate-400" />
+          </div>
+          <p className="text-sm font-medium text-slate-700 mb-1">No projects yet</p>
+          <p className="text-sm text-slate-400 mb-5">Create your first project to get started.</p>
+        </div>
+      )}
 
       {active.length > 0 && (
         <section className="mb-8">

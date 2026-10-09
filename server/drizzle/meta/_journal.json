@@ -8,6 +8,41 @@
       "when": 1790601779419,
       "tag": "0000_flowery_maddog",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790964243315,
+      "tag": "0001_overrated_owl",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791468941597,
+      "tag": "0002_bumpy_wendigo",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791479960370,
+      "tag": "0003_careful_fantastic_four",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791480184965,
+      "tag": "0004_powerful_kingpin",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791480432216,
+      "tag": "0005_strange_stick",
+      "breakpoints": true
     }
   ]
 }
