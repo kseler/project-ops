@@ -21,10 +21,21 @@ const projectIdParamsSchema = z.object({
 // GET /api/projects
 router.get('/', async (req: Request, res: Response) => {
   try {
+    const organizationId =  res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({
+        error: 'No active organization',
+      });
+    }
+
     const result = await db
       .select()
       .from(projects)
-      .where(isNull(projects.archivedAt));
+      .where(and(
+        eq(projects.organizationId, organizationId),
+        isNull(projects.archivedAt)
+    ));
 
     res.json(result);
   } catch (error) {
@@ -36,6 +47,14 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /api/projects/:id
 router.get('/:id', async (req: Request<{id: string}>, res: Response) => {
   try {
+    const organizationId =  res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({
+        error: 'No active organization',
+      });
+    }
+
     const parsedParams = projectIdParamsSchema.safeParse(req.params);
 
     if (!parsedParams.success) {
@@ -49,6 +68,7 @@ router.get('/:id', async (req: Request<{id: string}>, res: Response) => {
       .from(projects)
       .where(and(
         eq(projects.id, id),
+        eq(projects.organizationId, organizationId),
         isNull(projects.archivedAt),
       ),);
 
@@ -67,6 +87,13 @@ router.get('/:id', async (req: Request<{id: string}>, res: Response) => {
 // POST /api/projects
 router.post('/', async (req: Request, res: Response) => {
   try {
+    const organizationId =  res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({
+        error: 'No active organization',
+      });
+    }
 
     const parsedBody = createProjectSchema.safeParse(req.body);
 
@@ -80,7 +107,10 @@ router.post('/', async (req: Request, res: Response) => {
 
     const [project] = await db
       .insert(projects)
-      .values(data)
+      .values({
+        ...data,
+        organizationId
+      })
       .returning();
 
     return res.status(201).json(project);
