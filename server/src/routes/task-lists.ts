@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { Request, Response, Router } from 'express';
 import z from 'zod';
 
@@ -19,6 +19,12 @@ const router = Router();
 // GET /api/task-lists
 router.get('/', async (req: Request, res: Response) => {
   try {
+    const organizationId = res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({ error: 'No active organization' });
+    }
+
     const parsedQuery = getTaskListsQuerySchema.safeParse(req.query);
 
     if (!parsedQuery.success) {
@@ -30,8 +36,17 @@ router.get('/', async (req: Request, res: Response) => {
     const { projectId } = parsedQuery.data;
 
     const result = await db
-      .select()
+      .select({
+        id: taskLists.id,
+        projectId: taskLists.projectId,
+        name: taskLists.name,
+        createdAt: taskLists.createdAt
+      })
       .from(taskLists)
+      .innerJoin(projects, and(
+        eq(taskLists.projectId, projects.id),
+        eq(projects.organizationId, organizationId),
+      ))
       .where(eq(taskLists.projectId, projectId));
 
     return res.json(result);
@@ -47,6 +62,12 @@ router.get('/', async (req: Request, res: Response) => {
 // POST /api/task-lists
 router.post('/', async (req: Request, res: Response) => {
   try {
+    const organizationId = res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({ error: 'No active organization' });
+    }
+
     const parsedBody = createTaskListSchema.safeParse(req.body);
 
     if (!parsedBody.success) {
@@ -60,7 +81,10 @@ router.post('/', async (req: Request, res: Response) => {
     const [project] = await db
       .select({ id: projects.id })
       .from(projects)
-      .where(eq(projects.id, projectId));
+      .where(and(
+        eq(projects.id, projectId),
+        eq(projects.organizationId, organizationId),
+      ));
 
     if (!project) {
       return res.status(404).json({
