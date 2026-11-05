@@ -1,9 +1,9 @@
-import { eq, getTableColumns } from 'drizzle-orm';
+import { and, eq, getTableColumns } from 'drizzle-orm';
 import { Request, Response,Router } from 'express';
 import z from 'zod';
 
 import { db } from '../db/index.js';
-import { taskLists, taskPriorityEnum, tasks, taskStatusEnum } from '../db/schema.js';
+import { projects, taskLists, taskPriorityEnum, tasks, taskStatusEnum } from '../db/schema.js';
 
 const nullableDate = z.iso.date().nullable();
 
@@ -72,34 +72,44 @@ const router = Router();
 // GET /api/tasks
 router.get('/', async (req: Request, res: Response) => {
   try {
-     const parsedQuery = getTasksQuerySchema.safeParse(req.query);
+    const organizationId = res.locals.auth.session.activeOrganizationId;
 
-      if (!parsedQuery.success) {
-        return res.status(400).json({
-          error: parsedQuery.error.issues,
-        });
-      }
+    if (!organizationId) {
+      return res.status(403).json({ error: 'No active organization' });
+    }
+
+    const parsedQuery = getTasksQuerySchema.safeParse(req.query);
+
+    if (!parsedQuery.success) {
+      return res.status(400).json({
+        error: parsedQuery.error.issues,
+      });
+    }
 
     const { taskListId, projectId } = parsedQuery.data;
 
-     if (taskListId) {
+    if (taskListId) {
       const result = await db
-        .select()
+        .select({ ...getTableColumns(tasks) })
         .from(tasks)
+        .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
+        .innerJoin(projects, and(
+          eq(taskLists.projectId, projects.id),
+          eq(projects.organizationId, organizationId),
+        ))
         .where(eq(tasks.taskListId, taskListId));
 
       return res.json(result);
     }
 
     const result = await db
-      .select({
-        ...getTableColumns(tasks),
-      })
+      .select({ ...getTableColumns(tasks) })
       .from(tasks)
-      .innerJoin(
-        taskLists,
-        eq(tasks.taskListId, taskLists.id),
-      )
+      .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
+      .innerJoin(projects, and(
+        eq(taskLists.projectId, projects.id),
+        eq(projects.organizationId, organizationId),
+      ))
       .where(eq(taskLists.projectId, projectId!));
 
     return res.json(result);
@@ -115,6 +125,12 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /api/tasks/:id
 router.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
   try {
+    const organizationId = res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({ error: 'No active organization' });
+    }
+
     const parsedParams = taskIdParamsSchema.safeParse(req.params);
 
     if (!parsedParams.success) {
@@ -122,8 +138,13 @@ router.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
     }
 
     const [task] = await db
-      .select()
+      .select({ ...getTableColumns(tasks) })
       .from(tasks)
+      .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
+      .innerJoin(projects, and(
+        eq(taskLists.projectId, projects.id),
+        eq(projects.organizationId, organizationId),
+      ))
       .where(eq(tasks.id, parsedParams.data.id));
 
     if (!task) {
@@ -158,9 +179,19 @@ router.post('/', async (req: Request, res: Response) => {
       dueDate,
     } = parsedBody.data;
 
+    const organizationId = res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({ error: 'No active organization' });
+    }
+
     const [taskList] = await db
       .select({ id: taskLists.id })
       .from(taskLists)
+      .innerJoin(projects, and(
+        eq(taskLists.projectId, projects.id),
+        eq(projects.organizationId, organizationId),
+      ))
       .where(eq(taskLists.id, taskListId));
 
     if (!taskList) {
@@ -196,6 +227,12 @@ router.post('/', async (req: Request, res: Response) => {
 // PATCH /api/tasks/:id
 router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
   try {
+    const organizationId = res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({ error: 'No active organization' });
+    }
+
     const parsedParams = taskIdParamsSchema.safeParse(req.params);
     const parsedBody = updateTaskSchema.safeParse(req.body);
 
@@ -211,20 +248,28 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
       });
     }
 
+    const [existing] = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
+      .innerJoin(projects, and(
+        eq(taskLists.projectId, projects.id),
+        eq(projects.organizationId, organizationId),
+      ))
+      .where(eq(tasks.id, parsedParams.data.id));
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
     const [updated] = await db
       .update(tasks)
       .set({
         ...parsedBody.data,
         updatedAt: new Date(),
       })
-      .where(eq(tasks.id, req.params.id))
+      .where(eq(tasks.id, parsedParams.data.id))
       .returning();
-
-    if (!updated) {
-      return res.status(404).json({
-        error: 'Task not found',
-      });
-    }
 
     return res.json(updated);
   } catch (error) {
@@ -239,6 +284,12 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
 // DELETE /api/tasks/:id
 router.delete('/:id', async (req: Request<{id: string}>, res: Response) => {
   try {
+    const organizationId = res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({ error: 'No active organization' });
+    }
+
     const parsedParams = taskIdParamsSchema.safeParse(req.params);
 
     if (!parsedParams.success) {
@@ -247,16 +298,22 @@ router.delete('/:id', async (req: Request<{id: string}>, res: Response) => {
       });
     }
 
-    const [deleted] = await db
-      .delete(tasks)
-      .where(eq(tasks.id, req.params.id))
-      .returning();
+    const [existing] = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
+      .innerJoin(projects, and(
+        eq(taskLists.projectId, projects.id),
+        eq(projects.organizationId, organizationId),
+      ))
+      .where(eq(tasks.id, parsedParams.data.id));
 
-    if (!deleted) {
-      return res.status(404).json({
-        error: 'Task not found',
-      });
+    if (!existing) {
+      return res.status(404).json({ error: 'Task not found' });
     }
+
+    await db.delete(tasks).where(eq(tasks.id, parsedParams.data.id));
+
     return res.status(204).send();
   } catch (error) {
     console.error('Failed to delete task', error);
