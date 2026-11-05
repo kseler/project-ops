@@ -43,11 +43,11 @@ router.get('/', async (req: Request, res: Response) => {
         createdAt: taskLists.createdAt
       })
       .from(taskLists)
-      .innerJoin(projects, and(
-        eq(taskLists.projectId, projects.id),
+      .innerJoin(projects, eq(taskLists.projectId, projects.id))
+      .where(and(
+        eq(taskLists.projectId, projectId),
         eq(projects.organizationId, organizationId),
-      ))
-      .where(eq(taskLists.projectId, projectId));
+      ));
 
     return res.json(result);
   } catch (error) {

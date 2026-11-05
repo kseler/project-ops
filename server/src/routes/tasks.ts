@@ -93,11 +93,11 @@ router.get('/', async (req: Request, res: Response) => {
         .select({ ...getTableColumns(tasks) })
         .from(tasks)
         .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
-        .innerJoin(projects, and(
-          eq(taskLists.projectId, projects.id),
+        .innerJoin(projects, eq(taskLists.projectId, projects.id))
+        .where(and(
+          eq(tasks.taskListId, taskListId),
           eq(projects.organizationId, organizationId),
-        ))
-        .where(eq(tasks.taskListId, taskListId));
+        ));
 
       return res.json(result);
     }
@@ -106,11 +106,11 @@ router.get('/', async (req: Request, res: Response) => {
       .select({ ...getTableColumns(tasks) })
       .from(tasks)
       .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
-      .innerJoin(projects, and(
-        eq(taskLists.projectId, projects.id),
+      .innerJoin(projects, eq(taskLists.projectId, projects.id))
+      .where(and(
+        eq(taskLists.projectId, projectId!),
         eq(projects.organizationId, organizationId),
-      ))
-      .where(eq(taskLists.projectId, projectId!));
+      ));
 
     return res.json(result);
   } catch (error) {
@@ -141,11 +141,11 @@ router.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
       .select({ ...getTableColumns(tasks) })
       .from(tasks)
       .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
-      .innerJoin(projects, and(
-        eq(taskLists.projectId, projects.id),
+      .innerJoin(projects, eq(taskLists.projectId, projects.id))
+      .where(and(
+        eq(tasks.id, parsedParams.data.id),
         eq(projects.organizationId, organizationId),
-      ))
-      .where(eq(tasks.id, parsedParams.data.id));
+      ));
 
     if (!task) {
       return res.status(404).json({ error: 'Task not found' });
@@ -188,11 +188,11 @@ router.post('/', async (req: Request, res: Response) => {
     const [taskList] = await db
       .select({ id: taskLists.id })
       .from(taskLists)
-      .innerJoin(projects, and(
-        eq(taskLists.projectId, projects.id),
+      .innerJoin(projects, eq(taskLists.projectId, projects.id))
+      .where(and(
+        eq(taskLists.id, taskListId),
         eq(projects.organizationId, organizationId),
-      ))
-      .where(eq(taskLists.id, taskListId));
+      ));
 
     if (!taskList) {
       return res.status(404).json({
@@ -252,11 +252,11 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
       .select({ id: tasks.id })
       .from(tasks)
       .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
-      .innerJoin(projects, and(
-        eq(taskLists.projectId, projects.id),
+      .innerJoin(projects, eq(taskLists.projectId, projects.id))
+      .where(and(
+        eq(tasks.id, parsedParams.data.id),
         eq(projects.organizationId, organizationId),
-      ))
-      .where(eq(tasks.id, parsedParams.data.id));
+      ));
 
     if (!existing) {
       return res.status(404).json({ error: 'Task not found' });
@@ -302,11 +302,11 @@ router.delete('/:id', async (req: Request<{id: string}>, res: Response) => {
       .select({ id: tasks.id })
       .from(tasks)
       .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
-      .innerJoin(projects, and(
-        eq(taskLists.projectId, projects.id),
+      .innerJoin(projects, eq(taskLists.projectId, projects.id))
+      .where(and(
+        eq(tasks.id, parsedParams.data.id),
         eq(projects.organizationId, organizationId),
-      ))
-      .where(eq(tasks.id, parsedParams.data.id));
+      ));
 
     if (!existing) {
       return res.status(404).json({ error: 'Task not found' });
