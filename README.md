@@ -494,18 +494,20 @@ Completed:
 - [x] Remove duplicated Zustand server state
 - [x] Task details/editing drawer
 - [x] Custom interactive Gantt workflow
+- [x] Authentication
+- [x] Organizations and memberships
+- [x] Multi-tenant authorization
 
 Next:
-
-- [ ] Authentication
-- [ ] Organizations and memberships
-- [ ] Multi-tenant authorization
-- [ ] Google OAuth
 - [ ] Realtime task synchronization with Socket.IO
 - [ ] Database-backed dashboard analytics
 - [ ] Automated testing
 - [ ] CI
 - [ ] Production deployment
+
+Non MVP:
+- [ ] Google OAuth
+- [ ] Custom dashboards
 
 ---
 
