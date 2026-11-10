@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { createProject, getProject, getProjects } from "@/api";
+import { createProject, getProject, getProjects, updateProject } from "@/api";
 import type { Project } from "@/types";
 
 export function useProjects() {
@@ -25,6 +25,22 @@ export function useProject(projectId?: string) {
   });
 
  }
+
+export function useUpdateProject(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { name?: string; description?: string; status?: string; dueDate?: string }) =>
+      updateProject(projectId, data),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['project', projectId], updated);
+      queryClient.setQueryData<Project[]>(['projects'], (current = []) =>
+        current.map((p) => (p.id === projectId ? updated : p)),
+      );
+    },
+    onError: (error) => console.error('Failed to update project', error),
+  });
+}
 
 export function useCreateProject() {
   const queryClient = useQueryClient();
