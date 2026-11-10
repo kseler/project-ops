@@ -1,5 +1,8 @@
 import { FolderKanban, LayoutDashboard, LogOut } from 'lucide-react';
+import { useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+
+import { socket } from '@/lib/socket';
 
 import { authClient } from '../lib/auth-client';
 
@@ -10,6 +13,27 @@ const navItems = [
 
 export function Layout() {
   const { data: org } = authClient.useActiveOrganization();
+
+  useEffect(() => {
+    const handleConnect = () => {
+      console.log('Socket connected:', socket.id);
+    };
+
+    const handleConnectError = (error: Error) => {
+      console.error('Socket connection failed:', error.message);
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('connect_error', handleConnectError);
+
+    socket.connect();
+
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off('connect_error', handleConnectError);
+      socket.disconnect();
+    };
+  }, []);
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900">
