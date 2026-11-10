@@ -19,6 +19,9 @@ export function ProjectCard({ project }: Props) {
       ? Math.round((project.completedCount / project.taskCount) * 100)
       : 0;
 
+  const due = new Date(project.dueDate);
+  const isOverdue = due < new Date() && project.status !== 'completed';
+
   return (
     <Link
       to={`/projects/${project.id}`}
@@ -50,9 +53,12 @@ export function ProjectCard({ project }: Props) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-slate-400">
-        <span>{project.taskCount} task{project.taskCount !== 1 ? 's' : ''}</span>
-        <span>Due {formatDistanceToNow(new Date(project.dueDate), { addSuffix: true })}</span>
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-slate-400">{project.taskCount} task{project.taskCount !== 1 ? 's' : ''}</span>
+        <span className={isOverdue ? 'text-red-500' : 'text-slate-400'}>
+          Due {formatDistanceToNow(due, { addSuffix: true })}
+          {isOverdue && ' · Overdue'}
+        </span>
       </div>
     </Link>
   );

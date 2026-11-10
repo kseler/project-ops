@@ -28,6 +28,13 @@ export const createProject = (data: {
   dueDate: string;
 }) => request<Project>('/projects', { method: 'POST', body: JSON.stringify(data) });
 
+export const updateProject = (id: string, data: {
+  name?: string;
+  description?: string;
+  status?: string;
+  dueDate?: string;
+}) => request<Project>(`/projects/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+
 // ─── Task Lists ───────────────────────────────────────────────────────────────
 
 export const getTaskLists = (projectId: string) =>
