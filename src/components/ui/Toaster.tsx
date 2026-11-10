@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
+import type { ToastType } from '@/services/toast';
 import { _setToastListener } from '@/services/toast';
 
 interface ToastItem {
   id: number;
   message: string;
+  type: ToastType;
   exiting: boolean;
 }
 
@@ -22,9 +24,9 @@ export function Toaster() {
   };
 
   useEffect(() => {
-    _setToastListener((message) => {
+    _setToastListener((message, type) => {
       const id = ++nextId;
-      setToasts((prev) => [...prev, { id, message, exiting: false }]);
+      setToasts((prev) => [...prev, { id, message, type, exiting: false }]);
 
       const t1 = setTimeout(() => {
         setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, exiting: true } : t)));
@@ -48,14 +50,22 @@ export function Toaster() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`flex items-center gap-2.5 pl-4 pr-2 py-2.5 bg-slate-900 text-white text-sm rounded-lg shadow-lg
+          className={`flex items-center gap-2.5 pl-4 pr-2 py-2.5 text-white text-sm rounded-lg shadow-lg
             transition-all duration-300
+            ${toast.type === 'error' ? 'bg-red-600' : 'bg-slate-900'}
             ${toast.exiting ? 'opacity-0 -translate-y-1' : 'opacity-100 translate-y-0'}`}
         >
-          <svg className="text-indigo-400 shrink-0" width={14} height={14} viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          {toast.type === 'error' ? (
+            <svg className="text-red-200 shrink-0" width={14} height={14} viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M8 5v3.5M8 11v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg className="text-indigo-400 shrink-0" width={14} height={14} viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
           <span>{toast.message}</span>
           <button
             onClick={() => dismiss(toast.id)}
