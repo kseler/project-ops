@@ -18,6 +18,13 @@ const projectIdParamsSchema = z.object({
   id: z.uuid(),
 });
 
+const updateProjectSchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  description: z.string().trim().optional(),
+  status: z.enum(projectStatusEnum.enumValues).optional(),
+  dueDate: z.iso.date().optional(),
+});
+
 // GET /api/projects
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -120,6 +127,44 @@ router.post('/', async (req: Request, res: Response) => {
     return res.status(500).json({
       error: 'Failed to create project',
     });
+  }
+});
+
+// PATCH /api/projects/:id
+router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const organizationId = res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({ error: 'No active organization' });
+    }
+
+    const parsedParams = projectIdParamsSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+      return res.status(400).json({ error: parsedParams.error.issues });
+    }
+
+    const parsedBody = updateProjectSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({ error: parsedBody.error.issues });
+    }
+
+    const { id } = parsedParams.data;
+
+    const [project] = await db
+      .update(projects)
+      .set(parsedBody.data)
+      .where(and(eq(projects.id, id), eq(projects.organizationId, organizationId)))
+      .returning();
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    return res.json(project);
+  } catch (error) {
+    console.error('Failed to update project', error);
+    return res.status(500).json({ error: 'Failed to update project' });
   }
 });
 
