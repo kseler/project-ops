@@ -4,6 +4,7 @@ import { flushSync } from 'react-dom';
 import { Link } from 'react-router-dom';
 
 import { useDragHandler } from '@/hooks/useDragHandler';
+import { useMouseScroller } from '@/hooks/useMouseScroller';
 import {
   addDays,
   applyDragOffset,
@@ -71,6 +72,8 @@ export function ProjectGanttView({ projectId }: Props) {
   const [renderEnd, setRenderEnd] = useState(() => addDays(today, INITIAL_BUFFER_DAYS));
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { enable: enableScroll, disable: disableScroll } = useMouseScroller(scrollRef, { direction: 'horizontal' });
+  const dragStartScrollLeft = useRef(0);
   const adjusting = useRef(false);
 
   const rows = useMemo(() =>
@@ -215,30 +218,28 @@ export function ProjectGanttView({ projectId }: Props) {
 
   useDragHandler<Task>({
     onDragStart(drag) {
-      return (DRAG_IDS as readonly string[]).includes(drag.dragId);
+      const accepted = (DRAG_IDS as readonly string[]).includes(drag.dragId);
+      if (accepted) {
+        dragStartScrollLeft.current = scrollRef.current?.scrollLeft ?? 0;
+        enableScroll();
+      }
+      return accepted;
     },
     onDrag(drag) {
       const task = drag.object;
+      const scrollDelta = (scrollRef.current?.scrollLeft ?? 0) - dragStartScrollLeft.current;
       const offsetDays = Math.round(
-        (drag.currentPointerX - drag.initialPointerX) / SEGMENT_WIDTH,
+        (drag.currentPointerX - drag.initialPointerX + scrollDelta) / SEGMENT_WIDTH,
       );
-
-      const updatedTask = applyDragOffset(
-        task,
-        drag.dragId,
-        offsetDays,
-      );
-
-      updateTaskInCache(
-        queryClient,
-        taskKeys.byProject(projectId),
-        updatedTask,
-      );
+      const updatedTask = applyDragOffset(task, drag.dragId, offsetDays);
+      updateTaskInCache(queryClient, taskKeys.byProject(projectId), updatedTask);
     },
     onDragEnd(drag) {
+      disableScroll();
       const task = drag.object;
+      const scrollDelta = (scrollRef.current?.scrollLeft ?? 0) - dragStartScrollLeft.current;
       const offsetDays = Math.round(
-        (drag.currentPointerX - drag.initialPointerX) / SEGMENT_WIDTH,
+        (drag.currentPointerX - drag.initialPointerX + scrollDelta) / SEGMENT_WIDTH,
       );
       if (offsetDays === 0) return;
 
