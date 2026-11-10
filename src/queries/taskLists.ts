@@ -4,9 +4,13 @@ import { createTaskList, getTaskLists } from "@/lib/api";
 import type { TaskList } from "@/lib/types";
 
 
+export const taskListKeys = {
+  byProject: (projectId: string) => ['taskLists', projectId] as const,
+};
+
 export function useTaskLists(projectId?: string) {
   return useQuery({
-    queryKey: ['taskLists', projectId],
+    queryKey: taskListKeys.byProject(projectId!),
     queryFn: () => getTaskLists(projectId!),
     enabled: !!projectId,
   });
@@ -18,9 +22,9 @@ export function useCreateTaskList() {
   return useMutation({
     mutationFn: createTaskList,
 
-    onSuccess: (createdTaskList, {projectId}) => {
+    onSuccess: (createdTaskList, { projectId }) => {
       queryClient.setQueryData<TaskList[]>(
-        ['taskLists', projectId],
+        taskListKeys.byProject(projectId),
         (current = []) => [...current, createdTaskList],
       );
     },

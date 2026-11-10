@@ -2,6 +2,7 @@ import { ArrowLeft, GanttChart, LayoutList } from 'lucide-react';
 import { useState } from 'react';
 import { Link, Outlet, useParams } from 'react-router-dom';
 
+import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { useProject } from '@/queries/projects';
 
 import { ProjectGanttView } from '../components/ProjectGanttView';
@@ -29,7 +30,9 @@ export function ProjectDetail() {
     data: project,
     isLoading,
     error,
-  } = useProject(projectId)
+  } = useProject(projectId);
+
+  useProjectRealtime(projectId);
 
   if (isLoading) return <div className="p-8 text-sm text-slate-400">Loading…</div>;
   if (error) return <div className="p-8 text-sm text-red-400">{error.message}</div>;

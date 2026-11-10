@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { Request, Response, Router } from 'express';
+import type { Server } from 'socket.io';
 import z from 'zod';
 
 import { db } from '../db/index.js';
@@ -99,6 +100,12 @@ router.post('/', async (req: Request, res: Response) => {
         name,
       })
       .returning();
+
+    const io = req.app.get('io') as Server | undefined;
+    io?.to(`project:${projectId}`).emit('tasklist:created', {
+      taskListId: taskList.id,
+      projectId,
+    });
 
     return res.status(201).json(taskList);
   } catch (error) {

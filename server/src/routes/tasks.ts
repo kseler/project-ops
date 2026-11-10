@@ -1,9 +1,16 @@
 import { and, eq, getTableColumns } from 'drizzle-orm';
 import { Request, Response,Router } from 'express';
+import type { Server } from 'socket.io';
 import z from 'zod';
 
 import { db } from '../db/index.js';
 import { projects, taskLists, taskPriorityEnum, tasks, taskStatusEnum } from '../db/schema.js';
+
+enum TaskEvent {
+  CREATED = "created",
+  UPDATED = "updated",
+  DELETED = "deleted"
+}
 
 const nullableDate = z.iso.date().nullable();
 
@@ -186,7 +193,10 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     const [taskList] = await db
-      .select({ id: taskLists.id })
+      .select({
+        id: taskLists.id,
+        projectId: projects.id,
+      })
       .from(taskLists)
       .innerJoin(projects, eq(taskLists.projectId, projects.id))
       .where(and(
@@ -213,6 +223,13 @@ router.post('/', async (req: Request, res: Response) => {
         dueDate: dueDate ?? null,
       })
       .returning();
+
+    const io = req.app.get('io') as Server | undefined;
+     io?.to(`project:${taskList.projectId}`).emit(`task:${TaskEvent.CREATED}`, {
+      taskId: task.id,
+      taskListId: taskList.id,
+      projectId: taskList.projectId,
+    });
 
     return res.status(201).json(task);
   } catch (error) {
@@ -248,8 +265,12 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
       });
     }
 
-    const [existing] = await db
-      .select({ id: tasks.id })
+    const [existingTask] = await db
+      .select({
+        id: tasks.id,
+        taskListId: taskLists.id,
+        projectId: projects.id,
+      })
       .from(tasks)
       .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
       .innerJoin(projects, eq(taskLists.projectId, projects.id))
@@ -258,7 +279,7 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
         eq(projects.organizationId, organizationId),
       ));
 
-    if (!existing) {
+    if (!existingTask) {
       return res.status(404).json({ error: 'Task not found' });
     }
 
@@ -270,6 +291,13 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
       })
       .where(eq(tasks.id, parsedParams.data.id))
       .returning();
+
+    const io = req.app.get('io') as Server | undefined;
+    io?.to(`project:${existingTask.projectId}`).emit(`task:${TaskEvent.UPDATED}`, {
+      taskId: updated.id,
+      taskListId: existingTask.taskListId,
+      projectId: existingTask.projectId,
+    });
 
     return res.json(updated);
   } catch (error) {
@@ -298,8 +326,12 @@ router.delete('/:id', async (req: Request<{id: string}>, res: Response) => {
       });
     }
 
-    const [existing] = await db
-      .select({ id: tasks.id })
+    const [existingTask] = await db
+      .select({
+          id: tasks.id,
+          taskListId: tasks.taskListId,
+          projectId: projects.id,
+        })
       .from(tasks)
       .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
       .innerJoin(projects, eq(taskLists.projectId, projects.id))
@@ -308,11 +340,18 @@ router.delete('/:id', async (req: Request<{id: string}>, res: Response) => {
         eq(projects.organizationId, organizationId),
       ));
 
-    if (!existing) {
+    if (!existingTask) {
       return res.status(404).json({ error: 'Task not found' });
     }
 
     await db.delete(tasks).where(eq(tasks.id, parsedParams.data.id));
+
+    const io = req.app.get('io') as Server | undefined;
+    io?.to(`project:${existingTask.projectId}`).emit(`task:${TaskEvent.DELETED}`, {
+      taskId: existingTask.id,
+      taskListId: existingTask.taskListId,
+      projectId: existingTask.projectId,
+    });
 
     return res.status(204).send();
   } catch (error) {
