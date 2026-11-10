@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-import type { Task } from './types';
+import type { Task } from '../types';
 
 export const SEGMENT_WIDTH = 40; // px per day
 export const SEGMENT_HEIGHT = 36; // px per row — must match left-panel row height

@@ -1,8 +1,8 @@
 import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import type { Task } from '@/lib/types';
 import { removeTaskFromCache, taskKeys, updateTaskInCache } from '@/queries/tasks';
+import type { Task } from '@/types';
 
 const makeTask = (id: string, name: string): Task => ({
   id,

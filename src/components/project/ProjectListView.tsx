@@ -5,7 +5,7 @@ import { addToast } from '@/lib/toast';
 import { hasErrors, validateTaskList } from '@/lib/validation';
 import { useCreateTaskList, useTaskLists } from '@/queries/taskLists';
 
-import { TaskListView } from './TaskListView';
+import { TaskListView } from '../task/TaskListView';
 
 interface Props {
   projectId: string;

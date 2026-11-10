@@ -2,12 +2,11 @@ import { ArrowLeft, GanttChart, LayoutList } from 'lucide-react';
 import { useState } from 'react';
 import { Link, Outlet, useParams } from 'react-router-dom';
 
+import { ProjectGanttView } from '@/components/project/ProjectGanttView';
+import { ProjectListView } from '@/components/project/ProjectListView';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { useProject } from '@/queries/projects';
-
-import { ProjectGanttView } from '../components/ProjectGanttView';
-import { ProjectListView } from '../components/ProjectListView';
-import type { Project } from '../lib/types';
+import type { Project } from '@/types';
 
 type View = 'list' | 'gantt';
 

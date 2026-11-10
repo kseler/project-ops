@@ -1,7 +1,7 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { createTask, deleteTask, getTask, getTasksByProject, getTasksByTaskList, updateTask } from "@/lib/api";
-import type { Task } from "@/lib/types";
+import { createTask, deleteTask, getTask, getTasksByProject, getTasksByTaskList, updateTask } from "@/api";
+import type { Task } from "@/types";
 
 export const taskKeys = {
   all: ['tasks'] as const,

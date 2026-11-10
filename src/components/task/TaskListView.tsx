@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { addToast } from '@/lib/toast';
 import { hasErrors, validateTask } from '@/lib/validation';
 import { useCreateTask, useTasksByTaskList } from '@/queries/tasks';
+import type { TaskList } from '@/types';
 
-import type { TaskList } from '../lib/types';
 import { TaskItem } from './TaskItem';
 
 interface Props {

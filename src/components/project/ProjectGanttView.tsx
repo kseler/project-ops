@@ -3,9 +3,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Link } from 'react-router-dom';
 
-import { useTaskLists } from '@/queries/taskLists';
-import { taskKeys, updateTaskInCache, useTasksByProject, useUpdateTask } from '@/queries/tasks';
-
+import { useDragHandler } from '@/hooks/useDragHandler';
 import {
   addDays,
   applyDragOffset,
@@ -14,9 +12,11 @@ import {
   getTimelineGridStyle,
   SEGMENT_HEIGHT,
   SEGMENT_WIDTH,
-} from '../lib/ganttUtils';
-import type { Task, TaskList } from '../lib/types';
-import { useDragHandler } from '../lib/useDragHandler';
+} from '@/lib/ganttUtils';
+import { useTaskLists } from '@/queries/taskLists';
+import { taskKeys, updateTaskInCache, useTasksByProject, useUpdateTask } from '@/queries/tasks';
+import type { Task, TaskList } from '@/types';
+
 import { GanttTaskBar } from './GanttTaskBar';
 
 // ─── Constants ────────────────────────────────────────────────────────────────

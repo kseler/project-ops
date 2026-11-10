@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TaskItem } from '@/components/TaskItem';
-import type { Task } from '@/lib/types';
+import { TaskItem } from '@/components/task/TaskItem';
+import type { Task } from '@/types';
 
 const mockMutate = vi.fn();
 

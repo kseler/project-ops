@@ -5,9 +5,9 @@ import { Link, useParams } from 'react-router-dom';
 
 import { addToast } from '@/lib/toast';
 import { removeTaskFromCache, taskKeys, updateTaskInCache, useDeleteTask, useUpdateTask } from '@/queries/tasks';
+import type { Task } from '@/types';
 
-import type { Task } from '../lib/types';
-import { ConfirmModal } from './ConfirmModal';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 const priorityDot: Record<Task['priority'], string> = {
   high: 'bg-red-400',

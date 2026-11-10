@@ -10,7 +10,7 @@ import {
   SEGMENT_WIDTH,
   toISO,
 } from '@/lib/ganttUtils';
-import type { Task } from '@/lib/types';
+import type { Task } from '@/types';
 
 const baseTask: Task = {
   id: 't1',

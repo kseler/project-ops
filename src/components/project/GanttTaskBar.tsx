@@ -2,9 +2,10 @@ import { GripVertical } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 
-import { toISO } from '../lib/ganttUtils';
-import type { Task } from '../lib/types';
-import { DragHandle } from './DragHandle';
+import { toISO } from '@/lib/ganttUtils';
+import type { Task } from '@/types';
+
+import { DragHandle } from '../ui/DragHandle';
 
 interface Props {
   task: Task;

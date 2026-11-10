@@ -14,8 +14,8 @@ import {
   YAxis,
 } from 'recharts';
 
-import { getProjects } from '../lib/api';
-import type { Project } from '../lib/types';
+import { getProjects } from '@/api';
+import type { Project } from '@/types';
 
 function buildStatusData(projects: Project[]) {
   // Derive from project progress — this is a simplification since we don't

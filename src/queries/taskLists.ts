@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { createTaskList, getTaskLists } from "@/lib/api";
-import type { TaskList } from "@/lib/types";
+import { createTaskList, getTaskLists } from "@/api";
+import type { TaskList } from "@/types";
 
 
 export const taskListKeys = {

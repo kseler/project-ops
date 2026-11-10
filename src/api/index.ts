@@ -1,4 +1,4 @@
-import type { Project, Task, TaskList } from './types';
+import type { Project, Task, TaskList } from '../types';
 
 const BASE = '/api';
 
