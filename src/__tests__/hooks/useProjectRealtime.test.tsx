@@ -12,7 +12,7 @@ const mockEmit = vi.hoisted(() => vi.fn());
 const mockOn = vi.hoisted(() => vi.fn());
 const mockOff = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/socket', () => ({
+vi.mock('@/services/socket', () => ({
   socket: { emit: mockEmit, on: mockOn, off: mockOff },
 }));
 

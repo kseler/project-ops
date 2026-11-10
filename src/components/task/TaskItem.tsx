@@ -3,8 +3,8 @@ import { Calendar, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import { addToast } from '@/lib/toast';
 import { removeTaskFromCache, taskKeys, updateTaskInCache, useDeleteTask, useUpdateTask } from '@/queries/tasks';
+import { addToast } from '@/services/toast';
 import type { Task } from '@/types';
 
 import { ConfirmModal } from '../ui/ConfirmModal';

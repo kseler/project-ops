@@ -1,9 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { socket } from '@/lib/socket';
 import { taskListKeys } from '@/queries/taskLists';
 import { taskKeys } from '@/queries/tasks';
+import { socket } from '@/services/socket';
 
 type TaskEvent = { taskId: string; taskListId: string; projectId: string };
 type TaskListEvent = { taskListId: string; projectId: string };

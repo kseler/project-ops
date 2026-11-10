@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
-import { authClient } from '../lib/auth-client';
+import { authClient } from '../services/auth';
 
 export function Onboarding() {
   const [orgName, setOrgName] = useState('');

@@ -2,8 +2,8 @@ import { FolderKanban, LayoutDashboard, LogOut } from 'lucide-react';
 import { useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 
-import { authClient } from '@/lib/auth-client';
-import { socket } from '@/lib/socket';
+import { authClient } from '@/services/auth';
+import { socket } from '@/services/socket';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },

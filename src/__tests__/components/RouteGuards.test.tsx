@@ -2,12 +2,12 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
-import { authClient } from '@/lib/auth-client';
 import { OrganizationRoute } from '@/routes/OrganizationRoute';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { PublicRoute } from '@/routes/PublicRoute';
+import { authClient } from '@/services/auth';
 
-vi.mock('@/lib/auth-client', () => ({
+vi.mock('@/services/auth', () => ({
   authClient: { useSession: vi.fn() },
 }));
 

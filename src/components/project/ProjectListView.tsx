@@ -1,9 +1,9 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
-import { addToast } from '@/lib/toast';
 import { hasErrors, validateTaskList } from '@/lib/validation';
 import { useCreateTaskList, useTaskLists } from '@/queries/taskLists';
+import { addToast } from '@/services/toast';
 
 import { TaskListView } from '../task/TaskListView';
 

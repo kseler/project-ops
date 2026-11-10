@@ -2,9 +2,9 @@ import { FolderOpen, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { ProjectCard } from '@/components/project/ProjectCard';
-import { addToast } from '@/lib/toast';
 import { hasErrors, validateProject } from '@/lib/validation';
 import { useCreateProject, useProjects } from '@/queries/projects';
+import { addToast } from '@/services/toast';
 
 interface CreateProjectForm {
   name: string

@@ -3,10 +3,10 @@ import { Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { addToast } from '@/lib/toast';
 import { validateTask } from '@/lib/validation';
 import { taskKeys, updateTaskInCache, useDeleteTask, useTask, useUpdateTask } from '@/queries/tasks';
 import { removeTaskFromCache } from '@/queries/tasks';
+import { addToast } from '@/services/toast';
 import type { Task, TaskPriority, TaskStatus } from '@/types';
 
 import { ConfirmModal } from '../ui/ConfirmModal';

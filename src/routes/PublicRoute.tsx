@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 
-import { authClient } from '../lib/auth-client';
+import { authClient } from '../services/auth';
 
 export function PublicRoute() {
   const { data: session, isPending } = authClient.useSession();

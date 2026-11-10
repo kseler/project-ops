@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { _setToastListener } from '@/lib/toast';
+import { _setToastListener } from '@/services/toast';
 
 interface ToastItem {
   id: number;
