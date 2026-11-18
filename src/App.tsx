@@ -4,10 +4,12 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { TaskDrawer } from './components/task/TaskDrawer';
 import { Toaster } from './components/ui/Toaster';
+import { AcceptInvitation } from './pages/AcceptInvitation';
 import { Dashboard } from './pages/Dashboard';
 import { Onboarding } from './pages/Onboarding';
 import { ProjectDetail } from './pages/ProjectDetail';
 import { Projects } from './pages/Projects';
+import { Settings } from './pages/Settings';
 import { SignIn } from './pages/SignIn';
 import { SignUp } from './pages/SignUp';
 import { OrganizationRoute } from './routes/OrganizationRoute';
@@ -28,6 +30,7 @@ export default function App() {
           </Route>
           <Route element={<ProtectedRoute />}>
               <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/accept-invitation/:id" element={<AcceptInvitation />} />
 
               <Route element={<OrganizationRoute />}>
                 <Route element={<Layout />}>
@@ -36,6 +39,7 @@ export default function App() {
                   <Route path="/projects/:id" element={<ProjectDetail />}>
                     <Route path="tasks/:taskId" element={<TaskDrawer />} />
                   </Route>
+                  <Route path="/settings" element={<Settings />} />
                 </Route>
             </Route>
           </Route>
