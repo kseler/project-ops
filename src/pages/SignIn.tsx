@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
+import { safeRedirect, withRedirect } from '../lib/redirect';
 import { authClient } from '../services/auth';
+import type { AcceptInvitationState } from './AcceptInvitation';
 
 export function SignIn() {
   const [email, setEmail] = useState('');
@@ -10,6 +12,9 @@ export function SignIn() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirect = safeRedirect(searchParams.get('redirect'));
+  const fromInvite = redirect?.startsWith('/accept-invitation/') ?? false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +29,10 @@ export function SignIn() {
       return;
     }
 
-    navigate('/', { replace: true });
+    navigate(redirect ?? '/', {
+      replace: true,
+      state: fromInvite ? ({ autoAccept: true } satisfies AcceptInvitationState) : undefined,
+    });
   };
 
   return (
@@ -32,7 +40,18 @@ export function SignIn() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <span className="text-slate-900 font-semibold text-xl tracking-tight">ProjectOps</span>
-          <p className="text-sm text-slate-500 mt-1">Sign in to your account</p>
+          <p className="text-sm text-slate-500 mt-1">
+            {fromInvite ? 'Sign in to accept your invitation' : 'Sign in to your account'}
+          </p>
+          {fromInvite && (
+            <p className="text-xs text-slate-500 mt-3 bg-indigo-50 border border-indigo-100 rounded-md px-3 py-2">
+              New to ProjectOps?{' '}
+              <Link to={withRedirect('/sign-up', redirect)} className="font-medium text-indigo-600 hover:underline">
+                Create an account
+              </Link>{' '}
+              with the email address the invitation was sent to.
+            </p>
+          )}
         </div>
 
         <form
@@ -85,7 +104,7 @@ export function SignIn() {
 
         <p className="text-center text-xs text-slate-500 mt-5">
           Don't have an account?{' '}
-          <Link to="/sign-up" className="text-indigo-600 hover:underline">
+          <Link to={withRedirect('/sign-up', redirect)} className="text-indigo-600 hover:underline">
             Sign up
           </Link>
         </p>

@@ -1,9 +1,11 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
+import { withRedirect } from '../lib/redirect';
 import { authClient } from '../services/auth';
 
 export function ProtectedRoute() {
   const { data: session, isPending } = authClient.useSession();
+  const location = useLocation();
 
   if (isPending) {
     return (
@@ -14,7 +16,8 @@ export function ProtectedRoute() {
   }
 
   if (!session) {
-    return <Navigate to="/sign-in" replace />;
+    const from = location.pathname + location.search;
+    return <Navigate to={withRedirect('/sign-in', from === '/' ? null : from)} replace />;
   }
 
   return <Outlet />;

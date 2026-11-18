@@ -4,5 +4,12 @@ export default defineConfig({
   test: {
     environment: 'node',
     testTimeout: 15000,
+    // all test files share one database that is truncated before each test
+    fileParallelism: false,
+    // app.ts loads server/.env too; blank these so tests never send real emails
+    env: {
+      RESEND_API_KEY: '',
+      EMAIL_FROM: '',
+    },
   },
 });

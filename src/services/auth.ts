@@ -7,3 +7,7 @@ export const authClient = createAuthClient({
     organizationClient(),
   ]
 });
+
+export type ActiveOrganization = typeof authClient.$Infer.ActiveOrganization;
+export type OrganizationMember = ActiveOrganization['members'][number];
+export type OrganizationInvitation = ActiveOrganization['invitations'][number];

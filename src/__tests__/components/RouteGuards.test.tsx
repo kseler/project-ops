@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OrganizationRoute } from '@/routes/OrganizationRoute';
@@ -47,7 +47,27 @@ describe('ProtectedRoute', () => {
     renderProtected();
     expect(screen.getByText('Protected Content')).toBeInTheDocument();
   });
+
+  it('remembers the requested page in ?redirect= when signed out', () => {
+    withSession(null);
+    render(
+      <MemoryRouter initialEntries={['/accept-invitation/inv-1']}>
+        <Routes>
+          <Route element={<ProtectedRoute />}>
+            <Route path="/accept-invitation/:id" element={<div>Invite</div>} />
+          </Route>
+          <Route path="/sign-in" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId('location')).toHaveTextContent('/sign-in?redirect=%2Faccept-invitation%2Finv-1');
+  });
 });
+
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname + location.search}</div>;
+}
 
 describe('PublicRoute', () => {
   function renderPublic() {
@@ -78,6 +98,32 @@ describe('PublicRoute', () => {
   it('redirects to / when the user is already authenticated', () => {
     withSession({ session: { activeOrganizationId: 'org-1' }, user: {} });
     renderPublic();
+    expect(screen.getByText('Home')).toBeInTheDocument();
+  });
+
+  function renderPublicAt(url: string) {
+    return render(
+      <MemoryRouter initialEntries={[url]}>
+        <Routes>
+          <Route element={<PublicRoute />}>
+            <Route path="/sign-in" element={<div>Sign In Page</div>} />
+          </Route>
+          <Route path="/" element={<div>Home</div>} />
+          <Route path="/accept-invitation/:id" element={<div>Invite Page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it('sends an authenticated user to the ?redirect= page', () => {
+    withSession({ session: { activeOrganizationId: null }, user: {} });
+    renderPublicAt('/sign-in?redirect=%2Faccept-invitation%2Finv-1');
+    expect(screen.getByText('Invite Page')).toBeInTheDocument();
+  });
+
+  it('ignores an external ?redirect= and goes home', () => {
+    withSession({ session: { activeOrganizationId: 'org-1' }, user: {} });
+    renderPublicAt('/sign-in?redirect=%2F%2Fevil.com');
     expect(screen.getByText('Home')).toBeInTheDocument();
   });
 });
