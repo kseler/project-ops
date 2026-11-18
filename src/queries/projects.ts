@@ -3,9 +3,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createProject, getProject, getProjects, updateProject } from "@/api";
 import type { Project } from "@/types";
 
+export const projectKeys = {
+  all: ['projects'] as const,
+  byId: (projectId: string) => ['project', projectId] as const,
+};
+
 export function useProjects() {
   return useQuery({
-    queryKey: ['projects'],
+    queryKey: projectKeys.all,
     queryFn: getProjects,
   });
  }
@@ -14,13 +19,13 @@ export function useProject(projectId?: string) {
   const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey: ['project', projectId],
+    queryKey: projectKeys.byId(projectId!),
     queryFn: () => getProject(projectId!),
     enabled: !!projectId,
 
     initialData: () =>
       queryClient
-        .getQueryData<Project[]>(['projects'])
+        .getQueryData<Project[]>(projectKeys.all)
         ?.find((project) => project.id === projectId),
   });
 
@@ -33,8 +38,8 @@ export function useUpdateProject(projectId: string) {
     mutationFn: (data: { name?: string; description?: string; status?: string; dueDate?: string }) =>
       updateProject(projectId, data),
     onSuccess: (updated) => {
-      queryClient.setQueryData(['project', projectId], updated);
-      queryClient.setQueryData<Project[]>(['projects'], (current = []) =>
+      queryClient.setQueryData(projectKeys.byId(projectId), updated);
+      queryClient.setQueryData<Project[]>(projectKeys.all, (current = []) =>
         current.map((p) => (p.id === projectId ? updated : p)),
       );
     },
@@ -50,7 +55,7 @@ export function useCreateProject() {
 
     onSuccess: (createdProject) => {
       queryClient.setQueryData<Project[]>(
-        ['projects'],
+        projectKeys.all,
         (current = []) => [...current, createdProject],
       );
     },
