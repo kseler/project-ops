@@ -46,6 +46,12 @@ export const createTaskList = (data: {projectId: string, name: string}) =>
     body: JSON.stringify(data),
   });
 
+export const updateTaskList = (id: string, data: { name: string }) =>
+  request<TaskList>(`/task-lists/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+
+export const deleteTaskList = (id: string) =>
+  request<void>(`/task-lists/${id}`, { method: 'DELETE' });
+
 // ─── Tasks ────────────────────────────────────────────────────────────────────
 
 export const createTask = (data: {

@@ -62,13 +62,15 @@ describe('useProjectRealtime', () => {
     expect(mockEmit).not.toHaveBeenCalled();
   });
 
-  it('registers handlers for all 4 socket events', () => {
+  it('registers handlers for all socket events', () => {
     renderHook(() => useProjectRealtime('proj-1'), { wrapper });
     const registeredEvents = mockOn.mock.calls.map(([event]) => event);
     expect(registeredEvents).toContain('task:updated');
     expect(registeredEvents).toContain('task:created');
     expect(registeredEvents).toContain('task:deleted');
     expect(registeredEvents).toContain('tasklist:created');
+    expect(registeredEvents).toContain('tasklist:updated');
+    expect(registeredEvents).toContain('tasklist:deleted');
   });
 
   it('task:updated invalidates byProject, byTaskList, and byId', () => {
@@ -103,5 +105,21 @@ describe('useProjectRealtime', () => {
     act(() => fireEvent('tasklist:created', { taskListId: 'tl1', projectId: 'proj-1' }));
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskListKeys.byProject('proj-1') });
+  });
+
+  it('tasklist:updated invalidates taskListKeys.byProject', () => {
+    renderHook(() => useProjectRealtime('proj-1'), { wrapper });
+    act(() => fireEvent('tasklist:updated', { taskListId: 'tl1', projectId: 'proj-1' }));
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskListKeys.byProject('proj-1') });
+  });
+
+  it('tasklist:deleted invalidates task lists and project tasks, and removes the list tasks', () => {
+    renderHook(() => useProjectRealtime('proj-1'), { wrapper });
+    act(() => fireEvent('tasklist:deleted', { taskListId: 'tl1', projectId: 'proj-1' }));
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskListKeys.byProject('proj-1') });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskKeys.byProject('proj-1') });
+    expect(removeSpy).toHaveBeenCalledWith({ queryKey: taskKeys.byTaskList('tl1') });
   });
 });

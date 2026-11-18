@@ -15,6 +15,26 @@ export const createTaskListSchema = z.object({
   name: z.string().trim().min(1),
 });
 
+export const updateTaskListSchema = z.object({
+  name: z.string().trim().min(1),
+});
+
+const taskListIdParamsSchema = z.object({
+  id: z.uuid(),
+});
+
+async function findTaskListInOrg(id: string, organizationId: string) {
+  const [taskList] = await db
+    .select({ id: taskLists.id, projectId: taskLists.projectId })
+    .from(taskLists)
+    .innerJoin(projects, eq(taskLists.projectId, projects.id))
+    .where(and(
+      eq(taskLists.id, id),
+      eq(projects.organizationId, organizationId),
+    ));
+  return taskList;
+}
+
 const router = Router();
 
 // GET /api/task-lists
@@ -114,6 +134,89 @@ router.post('/', async (req: Request, res: Response) => {
     return res.status(500).json({
       error: 'Failed to create task list',
     });
+  }
+});
+
+// PATCH /api/task-lists/:id
+router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const organizationId = res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({ error: 'No active organization' });
+    }
+
+    const parsedParams = taskListIdParamsSchema.safeParse(req.params);
+    const parsedBody = updateTaskListSchema.safeParse(req.body);
+
+    if (!parsedParams.success) {
+      return res.status(400).json({ error: parsedParams.error.issues });
+    }
+
+    if (!parsedBody.success) {
+      return res.status(400).json({ error: parsedBody.error.issues });
+    }
+
+    const existing = await findTaskListInOrg(parsedParams.data.id, organizationId);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Task list not found' });
+    }
+
+    const [updated] = await db
+      .update(taskLists)
+      .set(parsedBody.data)
+      .where(eq(taskLists.id, existing.id))
+      .returning();
+
+    const io = req.app.get('io') as Server | undefined;
+    io?.to(`project:${existing.projectId}`).emit('tasklist:updated', {
+      taskListId: existing.id,
+      projectId: existing.projectId,
+    });
+
+    return res.json(updated);
+  } catch (error) {
+    console.error('Failed to update task list', error);
+
+    return res.status(500).json({ error: 'Failed to update task list' });
+  }
+});
+
+// DELETE /api/task-lists/:id — tasks are removed by the FK cascade
+router.delete('/:id', async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const organizationId = res.locals.auth.session.activeOrganizationId;
+
+    if (!organizationId) {
+      return res.status(403).json({ error: 'No active organization' });
+    }
+
+    const parsedParams = taskListIdParamsSchema.safeParse(req.params);
+
+    if (!parsedParams.success) {
+      return res.status(400).json({ error: parsedParams.error.issues });
+    }
+
+    const existing = await findTaskListInOrg(parsedParams.data.id, organizationId);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Task list not found' });
+    }
+
+    await db.delete(taskLists).where(eq(taskLists.id, existing.id));
+
+    const io = req.app.get('io') as Server | undefined;
+    io?.to(`project:${existing.projectId}`).emit('tasklist:deleted', {
+      taskListId: existing.id,
+      projectId: existing.projectId,
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Failed to delete task list', error);
+
+    return res.status(500).json({ error: 'Failed to delete task list' });
   }
 });
 
