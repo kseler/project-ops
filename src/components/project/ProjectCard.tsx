@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 
 import type { Project } from '@/types';
 
+import { ProjectProgress } from './ProjectProgress';
+
 const statusBadge: Record<Project['status'], string> = {
   active: 'bg-emerald-100 text-emerald-700',
   'on-hold': 'bg-amber-100 text-amber-700',
@@ -14,11 +16,6 @@ interface Props {
 }
 
 export function ProjectCard({ project }: Props) {
-  const progress =
-    project.taskCount > 0
-      ? Math.round((project.completedCount / project.taskCount) * 100)
-      : 0;
-
   const due = new Date(project.dueDate);
   const isOverdue = due < new Date() && project.status !== 'completed';
 
@@ -41,16 +38,7 @@ export function ProjectCard({ project }: Props) {
       )}
 
       <div className="mb-3">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-slate-400">Progress</span>
-          <span className="text-xs font-medium text-slate-600">{progress}%</span>
-        </div>
-        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-indigo-500 rounded-full transition-all"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
+        <ProjectProgress taskCount={project.taskCount} completedCount={project.completedCount} />
       </div>
 
       <div className="flex items-center justify-between text-xs">

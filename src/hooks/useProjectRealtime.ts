@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
+import { projectKeys } from '@/queries/projects';
 import { taskListKeys } from '@/queries/taskLists';
 import { taskKeys } from '@/queries/tasks';
 import { socket } from '@/services/socket';
@@ -24,21 +25,30 @@ export function useProjectRealtime(projectId: string | undefined) {
   }, [projectId]);
 
   useEffect(() => {
+    // task counts and progress are computed server-side, so any task change makes them stale
+    const invalidateProjectCounts = (pid: string) => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.byId(pid) });
+      queryClient.invalidateQueries({ queryKey: projectKeys.all });
+    };
+
     const handleUpdated = ({ taskId, taskListId, projectId: pid }: TaskEvent) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.byProject(pid) });
       queryClient.invalidateQueries({ queryKey: taskKeys.byTaskList(taskListId) });
       queryClient.invalidateQueries({ queryKey: taskKeys.byId(taskId) });
+      invalidateProjectCounts(pid);
     };
 
     const handleCreated = ({ taskListId, projectId: pid }: TaskEvent) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.byProject(pid) });
       queryClient.invalidateQueries({ queryKey: taskKeys.byTaskList(taskListId) });
+      invalidateProjectCounts(pid);
     };
 
     const handleDeleted = ({ taskId, taskListId, projectId: pid }: TaskEvent) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.byProject(pid) });
       queryClient.invalidateQueries({ queryKey: taskKeys.byTaskList(taskListId) });
       queryClient.removeQueries({ queryKey: taskKeys.byId(taskId) });
+      invalidateProjectCounts(pid);
     };
 
     const handleTaskListCreated = ({ projectId: pid }: TaskListEvent) => {
@@ -53,6 +63,7 @@ export function useProjectRealtime(projectId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: taskListKeys.byProject(pid) });
       queryClient.invalidateQueries({ queryKey: taskKeys.byProject(pid) });
       queryClient.removeQueries({ queryKey: taskKeys.byTaskList(taskListId) });
+      invalidateProjectCounts(pid);
     };
 
     socket.on('task:updated', handleUpdated);

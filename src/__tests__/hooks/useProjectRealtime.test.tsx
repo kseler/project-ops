@@ -3,6 +3,7 @@ import { act,renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
+import { projectKeys } from '@/queries/projects';
 import { taskListKeys } from '@/queries/taskLists';
 import { taskKeys } from '@/queries/tasks';
 
@@ -99,6 +100,17 @@ describe('useProjectRealtime', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskKeys.byTaskList('tl1') });
     expect(removeSpy).toHaveBeenCalledWith({ queryKey: taskKeys.byId('t1') });
   });
+
+  it.each(['task:created', 'task:updated', 'task:deleted', 'tasklist:deleted'])(
+    '%s invalidates the project so task counts refresh',
+    (event) => {
+      renderHook(() => useProjectRealtime('proj-1'), { wrapper });
+      act(() => fireEvent(event, { taskId: 't1', taskListId: 'tl1', projectId: 'proj-1' }));
+
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: projectKeys.byId('proj-1') });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: projectKeys.all });
+    },
+  );
 
   it('tasklist:created invalidates taskListKeys.byProject', () => {
     renderHook(() => useProjectRealtime('proj-1'), { wrapper });

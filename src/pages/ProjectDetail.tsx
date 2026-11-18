@@ -1,10 +1,11 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, CalendarDays, GanttChart, LayoutList, Pencil } from 'lucide-react';
+import { ArrowLeft, CalendarDays, GanttChart, LayoutList, ListChecks, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useParams } from 'react-router-dom';
 
 import { ProjectGanttView } from '@/components/project/ProjectGanttView';
 import { ProjectListView } from '@/components/project/ProjectListView';
+import { ProjectProgress } from '@/components/project/ProjectProgress';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { hasErrors, validateProject } from '@/lib/validation';
 import { useProject, useUpdateProject } from '@/queries/projects';
@@ -102,7 +103,7 @@ export function ProjectDetail() {
         {/* Display */}
         <div
           className={`transition-all duration-200 ease-out overflow-hidden ${
-            editing ? 'opacity-0 max-h-0' : 'opacity-100 max-h-40'
+            editing ? 'opacity-0 max-h-0' : 'opacity-100 max-h-60'
           }`}
         >
           <div className="flex items-start justify-between mb-1">
@@ -123,9 +124,20 @@ export function ProjectDetail() {
           {project.description && (
             <p className="text-sm text-slate-500 mb-2">{project.description}</p>
           )}
-          <div className={`flex items-center gap-1.5 text-xs mb-5 ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>
-            <CalendarDays size={12} />
-            <span>Due {formatDistanceToNow(due, { addSuffix: true })}{isOverdue && ' · Overdue'}</span>
+          <div className="flex items-center gap-4 text-xs mb-4">
+            <div className={`flex items-center gap-1.5 ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>
+              <CalendarDays size={12} />
+              <span>Due {formatDistanceToNow(due, { addSuffix: true })}{isOverdue && ' · Overdue'}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-slate-400">
+              <ListChecks size={12} />
+              <span>
+                {project.completedCount} of {project.taskCount} task{project.taskCount !== 1 ? 's' : ''} done
+              </span>
+            </div>
+          </div>
+          <div className="max-w-sm mb-5">
+            <ProjectProgress taskCount={project.taskCount} completedCount={project.completedCount} />
           </div>
         </div>
 
