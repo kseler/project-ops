@@ -28,6 +28,48 @@ export async function createUserWithOrg(email: string, orgName: string, slug: st
   return { agent, orgId: orgRes.body.id as string };
 }
 
+export async function signUp(email: string, name = 'Test User') {
+  const agent = request.agent(app);
+
+  await agent
+    .post('/api/auth/sign-up/email')
+    .set('Origin', ORIGIN)
+    .send({ name, email, password: 'password1234' })
+    .expect(200);
+
+  return agent;
+}
+
+export async function inviteMember(
+  adminAgent: request.Agent,
+  email: string,
+  role: 'admin' | 'member' = 'member',
+) {
+  const invite = await adminAgent
+    .post('/api/auth/organization/invite-member')
+    .set('Origin', ORIGIN)
+    .send({ email, role })
+    .expect(200);
+
+  const agent = await signUp(email, email.split('@')[0]);
+
+  const accepted = await agent
+    .post('/api/auth/organization/accept-invitation')
+    .set('Origin', ORIGIN)
+    .send({ invitationId: invite.body.id })
+    .expect(200);
+
+  return { agent, memberId: accepted.body.member.id as string };
+}
+
+export async function getMemberId(agent: request.Agent) {
+  const res = await agent
+    .get('/api/auth/organization/get-active-member')
+    .set('Origin', ORIGIN)
+    .expect(200);
+  return res.body.id as string;
+}
+
 export async function createProject(agent: request.Agent, name: string) {
   const res = await agent
     .post('/api/projects')
