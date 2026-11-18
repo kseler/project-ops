@@ -6,7 +6,23 @@ ProjectOps started as a frontend-focused project and is being developed toward a
 
 The project is also a place for me to explore architectural decisions deliberately rather than adding abstractions or libraries before the product needs them.
 
+<img src="./demo/images/gantt.png" width="600" />
+
 ---
+
+## Screenshots
+
+### Project dashboard
+
+<img src="./demo/images/dashboard.png" width="600" />
+
+### Project planning
+
+<img src="./demo/images/list.png" width="600" />
+
+### Task details
+
+<img src="./demo/images/task-drawer.png" width="600" />
 
 ## Features
 
