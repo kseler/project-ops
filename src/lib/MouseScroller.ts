@@ -4,6 +4,8 @@ export interface MouseScrollerOptions {
   threshold?: number;
   /** max px scrolled per frame, default 12 */
   speed?: number;
+  /** px at the start edge covered by sticky content (e.g. a frozen column), default 0 */
+  insetStart?: number;
 }
 
 /**
@@ -22,6 +24,7 @@ export class MouseScroller {
   private readonly direction: 'horizontal' | 'vertical';
   private readonly threshold: number;
   private readonly speed: number;
+  private readonly insetStart: number;
 
   private mouseX = 0;
   private mouseY = 0;
@@ -33,6 +36,7 @@ export class MouseScroller {
     this.direction = options.direction;
     this.threshold = options.threshold ?? 60;
     this.speed = options.speed ?? 12;
+    this.insetStart = options.insetStart ?? 0;
   }
 
   enable(): void {
@@ -65,24 +69,28 @@ export class MouseScroller {
     if (!this.active) return;
 
     const rect = this.el.getBoundingClientRect();
-    const { threshold, speed } = this;
+    const horizontal = this.direction === 'horizontal';
+    const delta = this.scrollDelta(
+      (horizontal ? this.mouseX - rect.left : this.mouseY - rect.top) - this.insetStart,
+      (horizontal ? rect.width : rect.height) - this.insetStart,
+    );
 
-    if (this.direction === 'horizontal') {
-      const rel = this.mouseX - rect.left;
-      if (rel >= 0 && rel < threshold) {
-        this.el.scrollLeft -= speed * (1 - rel / threshold);
-      } else if (rel > rect.width - threshold && rel <= rect.width) {
-        this.el.scrollLeft += speed * (1 - (rect.width - rel) / threshold);
-      }
-    } else {
-      const rel = this.mouseY - rect.top;
-      if (rel >= 0 && rel < threshold) {
-        this.el.scrollTop -= speed * (1 - rel / threshold);
-      } else if (rel > rect.height - threshold && rel <= rect.height) {
-        this.el.scrollTop += speed * (1 - (rect.height - rel) / threshold);
-      }
+    if (delta !== 0) {
+      if (horizontal) this.el.scrollLeft += delta;
+      else this.el.scrollTop += delta;
     }
 
     this.rafId = requestAnimationFrame(this.tick);
   };
+
+  // rel: pointer position measured from the start of the visible scroll area; size: that area's length
+  private scrollDelta(rel: number, size: number): number {
+    const { threshold, speed, insetStart } = this;
+
+    if (rel < -insetStart || rel > size) return 0;
+    // over the inset (sticky) area counts as past the start edge, so full speed
+    if (rel < threshold) return -speed * Math.min(1, 1 - rel / threshold);
+    if (rel > size - threshold) return speed * (1 - (size - rel) / threshold);
+    return 0;
+  }
 }
