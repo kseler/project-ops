@@ -45,16 +45,30 @@ export function useProjectRealtime(projectId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: taskListKeys.byProject(pid) });
     };
 
+    const handleTaskListUpdated = ({ projectId: pid }: TaskListEvent) => {
+      queryClient.invalidateQueries({ queryKey: taskListKeys.byProject(pid) });
+    };
+
+    const handleTaskListDeleted = ({ taskListId, projectId: pid }: TaskListEvent) => {
+      queryClient.invalidateQueries({ queryKey: taskListKeys.byProject(pid) });
+      queryClient.invalidateQueries({ queryKey: taskKeys.byProject(pid) });
+      queryClient.removeQueries({ queryKey: taskKeys.byTaskList(taskListId) });
+    };
+
     socket.on('task:updated', handleUpdated);
     socket.on('task:created', handleCreated);
     socket.on('task:deleted', handleDeleted);
     socket.on('tasklist:created', handleTaskListCreated);
+    socket.on('tasklist:updated', handleTaskListUpdated);
+    socket.on('tasklist:deleted', handleTaskListDeleted);
 
     return () => {
       socket.off('task:updated', handleUpdated);
       socket.off('task:created', handleCreated);
       socket.off('task:deleted', handleDeleted);
       socket.off('tasklist:created', handleTaskListCreated);
+      socket.off('tasklist:updated', handleTaskListUpdated);
+      socket.off('tasklist:deleted', handleTaskListDeleted);
     };
   }, [queryClient]);
 }
