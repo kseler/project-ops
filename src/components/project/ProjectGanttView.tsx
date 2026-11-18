@@ -72,7 +72,10 @@ export function ProjectGanttView({ projectId }: Props) {
   const [renderEnd, setRenderEnd] = useState(() => addDays(today, INITIAL_BUFFER_DAYS));
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { enable: enableScroll, disable: disableScroll } = useMouseScroller(scrollRef, { direction: 'horizontal' });
+  const { enable: enableScroll, disable: disableScroll } = useMouseScroller(scrollRef, {
+    direction: 'horizontal',
+    insetStart: LEFT_PANEL_WIDTH,
+  });
   const dragStartScrollLeft = useRef(0);
   const adjusting = useRef(false);
 
@@ -168,7 +171,8 @@ export function ProjectGanttView({ projectId }: Props) {
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollLeft = todayLeft - el.clientWidth / 2;
+    // the sticky left panel covers the first LEFT_PANEL_WIDTH px, so center today in what's left
+    el.scrollLeft = todayLeft - (el.clientWidth - LEFT_PANEL_WIDTH) / 2;
     setVisiblePxRange([
       Math.max(0, el.scrollLeft - DAY_BUFFER * SEGMENT_WIDTH),
       el.scrollLeft + el.clientWidth + DAY_BUFFER * SEGMENT_WIDTH,
@@ -260,57 +264,63 @@ export function ProjectGanttView({ projectId }: Props) {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  // One scroll container for both axes: the left panel is sticky on the x axis and the
+  // date header on the y axis, so rows and bars always scroll together.
   return (
-    <div className="flex h-full border border-slate-200 rounded-lg overflow-hidden bg-white">
-      {/* ── Left panel ───────────────────────────────────────────────────────── */}
-      <div
-        style={{ width: LEFT_PANEL_WIDTH }}
-        className="shrink-0 border-r border-slate-200 bg-white z-10 flex flex-col h-full"
-      >
+    <div
+      ref={scrollRef}
+      onScroll={handleScroll}
+      className="h-full overflow-auto border border-slate-200 rounded-lg bg-white"
+    >
+      <div className="flex" style={{ width: LEFT_PANEL_WIDTH + timelineWidth, minHeight: '100%' }}>
+        {/* ── Left panel ───────────────────────────────────────────────────────── */}
         <div
-          style={{ height: DATE_HEADER_HEIGHT }}
-          className="shrink-0 border-b border-slate-200 bg-slate-50"
-        />
-        {rows.map((row, i) => (
+          style={{ width: LEFT_PANEL_WIDTH }}
+          className="sticky left-0 z-30 shrink-0 border-r border-slate-200 bg-white flex flex-col"
+        >
           <div
-            key={i}
-            style={{ height: SEGMENT_HEIGHT }}
-            className={`shrink-0 flex items-center px-3 border-b border-slate-100 overflow-hidden ${
-              row.kind === 'header' ? 'bg-slate-50' : 'bg-white'
-            }`}
-          >
-            {row.kind === 'header' ? (
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">
-                {row.taskList.name}
-              </span>
-            ) : (
-              <Link
-                to={`/projects/${projectId}/tasks/${row.task.id}`}
-                onClick={(e) => e.stopPropagation()}
-                className="text-sm text-slate-600 pl-3 truncate hover:underline hover:text-indigo-600 transition-colors"
-              >
-                {row.task.name}
-              </Link>
+            style={{ height: DATE_HEADER_HEIGHT }}
+            className="sticky top-0 z-10 shrink-0 border-b border-slate-200 bg-slate-50"
+          />
+          {rows.map((row, i) => (
+            <div
+              key={i}
+              style={{ height: SEGMENT_HEIGHT }}
+              className={`shrink-0 flex items-center px-3 border-b border-slate-100 overflow-hidden ${
+                row.kind === 'header' ? 'bg-slate-50' : 'bg-white'
+              }`}
+            >
+              {row.kind === 'header' ? (
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate">
+                  {row.taskList.name}
+                </span>
+              ) : (
+                <Link
+                  to={`/projects/${projectId}/tasks/${row.task.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-sm text-slate-600 pl-3 truncate hover:underline hover:text-indigo-600 transition-colors"
+                >
+                  {row.task.name}
+                </Link>
+              )}
+            </div>
+          ))}
+
+          <div className="flex-1">
+            {rows.length === 0 && (
+              <p className="px-4 py-5 text-xs text-slate-400">No task lists yet.</p>
             )}
           </div>
-        ))}
-
-        <div className="flex-1">
-          {rows.length === 0 && (
-            <p className="px-4 py-5 text-xs text-slate-400">No task lists yet.</p>
-          )}
         </div>
-      </div>
 
-      {/* ── Timeline ─────────────────────────────────────────────────────────── */}
-      <div ref={scrollRef} className="flex-1 overflow-x-auto h-full" onScroll={handleScroll}>
+        {/* ── Timeline ─────────────────────────────────────────────────────────── */}
         <div
-          style={{ width: timelineWidth, minHeight: rowsHeight + DATE_HEADER_HEIGHT }}
-          className="flex flex-col h-full"
+          style={{ width: timelineWidth }}
+          className="shrink-0 flex flex-col"
         >
           {/* Date header */}
           <div
-            className="relative border-b border-slate-200 shrink-0"
+            className="sticky top-0 z-20 border-b border-slate-200 shrink-0"
             style={{ height: DATE_HEADER_HEIGHT }}
           >
             {/* Month row */}
@@ -356,7 +366,8 @@ export function ProjectGanttView({ projectId }: Props) {
             </div>
           </div>
 
-          <div className="flex-1 relative">
+          {/* isolate: bar internals (z-10 resize handles) can't rise above the sticky header */}
+          <div className="flex-1 relative isolate">
             <div
               style={{ ...gridStyle, height: '100%', minHeight: rowsHeight }}
             >
