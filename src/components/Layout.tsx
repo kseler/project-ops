@@ -1,7 +1,8 @@
-import { FolderKanban, LayoutDashboard, LogOut } from 'lucide-react';
+import { FolderKanban, LayoutDashboard, LogOut, Settings } from 'lucide-react';
 import { useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 
+import { roleLabel } from '@/lib/roles';
 import { authClient } from '@/services/auth';
 import { socket } from '@/services/socket';
 
@@ -10,8 +11,17 @@ const navItems = [
   { to: '/projects', label: 'Projects', icon: FolderKanban },
 ];
 
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+    isActive
+      ? 'bg-slate-700 text-white'
+      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+  }`;
+
 export function Layout() {
   const { data: org } = authClient.useActiveOrganization();
+  const { data: session } = authClient.useSession();
+  const { data: activeMember } = authClient.useActiveMember();
 
   useEffect(() => {
     const handleConnect = () => {
@@ -47,24 +57,27 @@ export function Layout() {
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-slate-700 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                }`
-              }
-            >
+            <NavLink key={to} to={to} end={end} className={navLinkClass}>
               <Icon size={16} />
               {label}
             </NavLink>
           ))}
         </nav>
-        <div className="px-3 py-4 border-t border-slate-700">
+        <div className="px-3 py-4 border-t border-slate-700 space-y-1">
+          {session && (
+            <div className="px-3 pb-3 mb-1 border-b border-slate-800">
+              <p className="text-sm font-medium text-white truncate" title={session.user.email}>
+                {session.user.name}
+              </p>
+              {activeMember && (
+                <p className="text-xs text-slate-400 mt-0.5">{roleLabel(activeMember.role)}</p>
+              )}
+            </div>
+          )}
+          <NavLink to="/settings" className={navLinkClass}>
+            <Settings size={16} />
+            Settings
+          </NavLink>
           <button
             onClick={() => authClient.signOut()}
             className="flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
