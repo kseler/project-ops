@@ -8,6 +8,7 @@ import { app } from './app.js';
 import { auth } from './auth/auth.js'
 import { db } from './db/index.js';
 import { projects } from './db/schema.js';
+import { isOrganizationMember } from './middleware/require-auth.js';
 
 const PORT = Number(process.env.PORT) || 3001;
 
@@ -32,6 +33,10 @@ io.use(async (socket, next) => {
 
     if (!session.session.activeOrganizationId) {
       return next(new Error('No active organization'));
+    }
+
+    if (!(await isOrganizationMember(session.user.id, session.session.activeOrganizationId))) {
+      return next(new Error('Not a member of the active organization'));
     }
 
     socket.data.userId = session.user.id;
