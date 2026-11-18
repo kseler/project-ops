@@ -58,6 +58,62 @@ describe('project isolation', () => {
   });
 });
 
+describe('project task counts', () => {
+  it('a project with no tasks reports 0 / 0 as numbers', async () => {
+    const { agent } = await createUserWithOrg('a@test.com', 'Org A', 'org-a');
+    const project = await createProject(agent, 'Empty');
+
+    const res = await agent.get(`/api/projects/${project.id}`).set('Origin', ORIGIN).expect(200);
+    expect(res.body.taskCount).toBe(0);
+    expect(res.body.completedCount).toBe(0);
+  });
+
+  it('counts tasks across all task lists and only done tasks as completed', async () => {
+    const { agent } = await createUserWithOrg('a@test.com', 'Org A', 'org-a');
+    const project = await createProject(agent, 'Counted');
+    const other = await createProject(agent, 'Other');
+    const listA = await createTaskList(agent, project.id, 'A');
+    const listB = await createTaskList(agent, project.id, 'B');
+    const otherList = await createTaskList(agent, other.id, 'Other list');
+
+    const done = await createTask(agent, listA.id, 'Done one');
+    await createTask(agent, listA.id, 'Todo one');
+    await createTask(agent, listB.id, 'Todo two');
+    await createTask(agent, otherList.id, 'Belongs to other project');
+    await agent.patch(`/api/tasks/${done.id}`).set('Origin', ORIGIN).send({ status: 'done' }).expect(200);
+
+    const detail = await agent.get(`/api/projects/${project.id}`).set('Origin', ORIGIN).expect(200);
+    expect(detail.body).toMatchObject({ taskCount: 3, completedCount: 1 });
+
+    const list = await agent.get('/api/projects').set('Origin', ORIGIN).expect(200);
+    const byName = Object.fromEntries(list.body.map((p: { name: string }) => [p.name, p]));
+    expect(byName.Counted).toMatchObject({ taskCount: 3, completedCount: 1 });
+    expect(byName.Other).toMatchObject({ taskCount: 1, completedCount: 0 });
+  });
+
+  it('PATCH /api/projects/:id returns the counts with the updated project', async () => {
+    const { agent } = await createUserWithOrg('a@test.com', 'Org A', 'org-a');
+    const project = await createProject(agent, 'Before');
+    const list = await createTaskList(agent, project.id, 'A');
+    await createTask(agent, list.id, 'Task');
+
+    const res = await agent
+      .patch(`/api/projects/${project.id}`)
+      .set('Origin', ORIGIN)
+      .send({ name: 'After' })
+      .expect(200);
+
+    expect(res.body).toMatchObject({ name: 'After', taskCount: 1, completedCount: 0 });
+  });
+
+  it('POST /api/projects returns zero counts', async () => {
+    const { agent } = await createUserWithOrg('a@test.com', 'Org A', 'org-a');
+    const project = await createProject(agent, 'New');
+
+    expect(project).toMatchObject({ taskCount: 0, completedCount: 0 });
+  });
+});
+
 describe('task-list isolation', () => {
   it('GET own task lists', async () => {
     const { agent: agentA } = await createUserWithOrg('a@test.com', 'Org A', 'org-a');

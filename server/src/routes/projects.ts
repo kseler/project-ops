@@ -1,11 +1,25 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, getTableColumns, isNull, type SQL, sql } from 'drizzle-orm';
 import { Request, Response, Router } from 'express';
 import { z } from 'zod';
 
 import { db } from '../db/index.js';
-import { projects, projectStatusEnum } from '../db/schema.js';
+import { projects, projectStatusEnum, taskLists, tasks } from '../db/schema.js';
 
 const router = Router();
+
+function selectProjectsWithCounts(where: SQL | undefined) {
+  return db
+    .select({
+      ...getTableColumns(projects),
+      taskCount: sql<number>`count(${tasks.id})::int`,
+      completedCount: sql<number>`(count(${tasks.id}) filter (where ${tasks.status} = 'done'))::int`,
+    })
+    .from(projects)
+    .leftJoin(taskLists, eq(taskLists.projectId, projects.id))
+    .leftJoin(tasks, eq(tasks.taskListId, taskLists.id))
+    .where(where)
+    .groupBy(projects.id);
+}
 
 export const createProjectSchema = z.object({
   name: z.string().trim().min(1),
@@ -36,12 +50,9 @@ router.get('/', async (req: Request, res: Response) => {
       });
     }
 
-    const result = await db
-      .select()
-      .from(projects)
-      .where(and(
-        eq(projects.organizationId, organizationId),
-        isNull(projects.archivedAt)
+    const result = await selectProjectsWithCounts(and(
+      eq(projects.organizationId, organizationId),
+      isNull(projects.archivedAt),
     ));
 
     res.json(result);
@@ -70,14 +81,11 @@ router.get('/:id', async (req: Request<{id: string}>, res: Response) => {
 
     const { id } = parsedParams.data;
 
-    const [project] = await db
-      .select()
-      .from(projects)
-      .where(and(
-        eq(projects.id, id),
-        eq(projects.organizationId, organizationId),
-        isNull(projects.archivedAt),
-      ),);
+    const [project] = await selectProjectsWithCounts(and(
+      eq(projects.id, id),
+      eq(projects.organizationId, organizationId),
+      isNull(projects.archivedAt),
+    ));
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -120,7 +128,7 @@ router.post('/', async (req: Request, res: Response) => {
       })
       .returning();
 
-    return res.status(201).json(project);
+    return res.status(201).json({ ...project, taskCount: 0, completedCount: 0 });
   } catch (error) {
     console.error('Failed to create project', error);
 
@@ -151,15 +159,17 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
 
     const { id } = parsedParams.data;
 
-    const [project] = await db
+    const [updated] = await db
       .update(projects)
       .set(parsedBody.data)
       .where(and(eq(projects.id, id), eq(projects.organizationId, organizationId)))
-      .returning();
+      .returning({ id: projects.id });
 
-    if (!project) {
+    if (!updated) {
       return res.status(404).json({ error: 'Project not found' });
     }
+
+    const [project] = await selectProjectsWithCounts(eq(projects.id, updated.id));
 
     return res.json(project);
   } catch (error) {
