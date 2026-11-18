@@ -81,6 +81,12 @@ describe('ProjectDetail', () => {
     expect(screen.getByText(/Due/)).toBeInTheDocument();
   });
 
+  it('renders the task count and progress', () => {
+    renderDetail();
+    expect(screen.getByText('2 of 5 tasks done')).toBeInTheDocument();
+    expect(screen.getByText('40%')).toBeInTheDocument();
+  });
+
   it('renders the status badge', () => {
     renderDetail();
     expect(screen.getByText('active')).toBeInTheDocument();
