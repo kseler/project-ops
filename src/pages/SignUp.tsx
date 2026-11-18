@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
+import { safeRedirect, withRedirect } from '../lib/redirect';
 import { authClient } from '../services/auth';
+import type { AcceptInvitationState } from './AcceptInvitation';
 
 export function SignUp() {
   const [name, setName] = useState('');
@@ -13,6 +15,10 @@ export function SignUp() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirect = safeRedirect(searchParams.get('redirect'));
+  // invited users join an existing organization instead of creating one
+  const joiningViaInvite = redirect?.startsWith('/accept-invitation/') ?? false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +43,11 @@ export function SignUp() {
     });
 
     if (signUpError) return;
+
+    if (joiningViaInvite) {
+      navigate(redirect!, { replace: true, state: { autoAccept: true } satisfies AcceptInvitationState });
+      return;
+    }
 
     const slug = orgName
       .trim()
@@ -66,7 +77,9 @@ export function SignUp() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <span className="text-slate-900 font-semibold text-xl tracking-tight">ProjectOps</span>
-          <p className="text-sm text-slate-500 mt-1">Create your account</p>
+          <p className="text-sm text-slate-500 mt-1">
+            {joiningViaInvite ? 'Create an account to accept your invitation' : 'Create your account'}
+          </p>
         </div>
 
         <form
@@ -87,18 +100,20 @@ export function SignUp() {
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
-              Organization name
-            </label>
-            <input
-              value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
-              required
-              placeholder="Acme Inc."
-              className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
-          </div>
+          {!joiningViaInvite && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Organization name
+              </label>
+              <input
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                required
+                placeholder="Acme Inc."
+                className="w-full text-sm px-3 py-2 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1.5">
@@ -158,7 +173,7 @@ export function SignUp() {
 
         <p className="text-center text-xs text-slate-500 mt-5">
           Already have an account?{' '}
-          <Link to="/sign-in" className="text-indigo-600 hover:underline">
+          <Link to={withRedirect('/sign-in', redirect)} className="text-indigo-600 hover:underline">
             Sign in
           </Link>
         </p>
