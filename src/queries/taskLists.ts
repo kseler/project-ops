@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { createTaskList, getTaskLists } from "@/api";
+import { createTaskList, deleteTaskList, getTaskLists, updateTaskList } from "@/api";
 import type { TaskList } from "@/types";
 
 
@@ -30,4 +30,40 @@ export function useCreateTaskList() {
     },
     onError: (error) => console.error('Failed to create taskList', error),
   });
+}
+
+export function useUpdateTaskList() {
+  return useMutation({
+    mutationFn: ({ id, ...patch }: { id: string; name: string }) => updateTaskList(id, patch),
+    onError: (error) => console.error('Failed to update taskList', error),
+  });
+}
+
+export function useDeleteTaskList() {
+  return useMutation({
+    mutationFn: deleteTaskList,
+    onError: (error) => console.error('Failed to delete taskList', error),
+  });
+}
+
+export function updateTaskListInCache(
+  queryClient: QueryClient,
+  projectId: string,
+  updatedTaskList: TaskList,
+) {
+  queryClient.setQueryData<TaskList[]>(taskListKeys.byProject(projectId), (taskLists = []) =>
+    taskLists.map((taskList) =>
+      taskList.id === updatedTaskList.id ? { ...taskList, ...updatedTaskList } : taskList,
+    ),
+  );
+}
+
+export function removeTaskListFromCache(
+  queryClient: QueryClient,
+  projectId: string,
+  taskListId: string,
+) {
+  queryClient.setQueryData<TaskList[]>(taskListKeys.byProject(projectId), (taskLists = []) =>
+    taskLists.filter((taskList) => taskList.id !== taskListId),
+  );
 }

@@ -1,11 +1,19 @@
-import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { useRef, useState } from 'react';
 
-import { hasErrors, validateTask } from '@/lib/validation';
-import { useCreateTask, useTasksByTaskList } from '@/queries/tasks';
+import { hasErrors, validateTask, validateTaskList } from '@/lib/validation';
+import {
+  removeTaskListFromCache,
+  updateTaskListInCache,
+  useDeleteTaskList,
+  useUpdateTaskList,
+} from '@/queries/taskLists';
+import { taskKeys, useCreateTask, useTasksByTaskList } from '@/queries/tasks';
 import { addToast } from '@/services/toast';
-import type { TaskList } from '@/types';
+import type { Task, TaskList } from '@/types';
 
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { TaskItem } from './TaskItem';
 
 interface Props {
@@ -19,9 +27,70 @@ export function TaskListView({ taskList }: Props) {
   const [newDueDate, setNewDueDate] = useState('');
   const [taskErrors, setTaskErrors] = useState<{ name?: string; dueDate?: string }>({});
 
+  const [editingName, setEditingName] = useState(false);
+  const [name, setName] = useState(taskList.name);
+  const [nameError, setNameError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const cancelNameEditRef = useRef(false);
+
+  const queryClient = useQueryClient();
   const {data: tasks} = useTasksByTaskList(taskList.id);
 
   const createTaskMutation = useCreateTask();
+  const updateTaskListMutation = useUpdateTaskList();
+  const deleteTaskListMutation = useDeleteTaskList();
+
+  const openNameEdit = () => {
+    setName(taskList.name);
+    setNameError('');
+    setEditingName(true);
+  };
+
+  const cancelNameEdit = () => {
+    setName(taskList.name);
+    setNameError('');
+    setEditingName(false);
+  };
+
+  const saveName = () => {
+    const errors = validateTaskList({ name });
+    if (errors.name) {
+      setNameError(errors.name);
+      return;
+    }
+
+    setEditingName(false);
+    if (name.trim() === taskList.name) return;
+
+    updateTaskListMutation.mutate({ id: taskList.id, name: name.trim() }, {
+      onSuccess: (updated) => {
+        updateTaskListInCache(queryClient, taskList.projectId, updated);
+        addToast('Task list renamed');
+      },
+      onError: () => {
+        setName(taskList.name);
+        addToast('Failed to rename task list', 'error');
+      },
+    });
+  };
+
+  const confirmAndDelete = () => {
+    deleteTaskListMutation.mutate(taskList.id, {
+      onSuccess: () => {
+        removeTaskListFromCache(queryClient, taskList.projectId, taskList.id);
+        queryClient.removeQueries({ queryKey: taskKeys.byTaskList(taskList.id) });
+        queryClient.setQueryData<Task[]>(taskKeys.byProject(taskList.projectId), (current) =>
+          current?.filter((task) => task.taskListId !== taskList.id),
+        );
+        setConfirmDelete(false);
+        addToast('Task list deleted');
+      },
+      onError: () => {
+        setConfirmDelete(false);
+        addToast('Failed to delete task list', 'error');
+      },
+    });
+  };
 
   const handleAdd = async () => {
     const errors = validateTask({ name: newName, startDate: newStartDate, dueDate: newDueDate });
@@ -48,22 +117,73 @@ export function TaskListView({ taskList }: Props) {
 
   const done = tasks?.filter((t) => t.status === 'done')?.length ?? 0;
 
+  const busy = updateTaskListMutation.isPending || deleteTaskListMutation.isPending;
+
   return (
-    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div className={`bg-white border border-slate-200 rounded-lg overflow-hidden ${busy ? 'opacity-60' : ''}`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-slate-800">{taskList.name}</h3>
-          <span className="text-xs text-slate-400">
-            {done}/{tasks?.length ?? 0}
-          </span>
+      <div className="group flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {editingName ? (
+            <div className="flex-1 min-w-0">
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => { setName(e.target.value); if (nameError) setNameError(''); }}
+                onBlur={() => {
+                  if (cancelNameEditRef.current) {
+                    cancelNameEditRef.current = false;
+                    cancelNameEdit();
+                    return;
+                  }
+                  saveName();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.blur();
+                  if (e.key === 'Escape') {
+                    cancelNameEditRef.current = true;
+                    e.currentTarget.blur();
+                  }
+                }}
+                aria-label="Task list name"
+                className={`w-full text-sm font-semibold text-slate-800 bg-transparent border-b focus:outline-none py-0.5 ${nameError ? 'border-red-300' : 'border-indigo-300'}`}
+              />
+              {nameError && <p className="text-xs text-red-500 mt-0.5">{nameError}</p>}
+            </div>
+          ) : (
+            <>
+              <h3 className="text-sm font-semibold text-slate-800 truncate">{taskList.name}</h3>
+              <span className="text-xs text-slate-400 shrink-0">
+                {done}/{tasks?.length ?? 0}
+              </span>
+              <button
+                onClick={openNameEdit}
+                disabled={busy}
+                title="Rename task list"
+                className="shrink-0 text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-all"
+              >
+                <Pencil size={12} />
+              </button>
+            </>
+          )}
         </div>
-        <button
-          onClick={() => setAdding(true)}
-          className="text-slate-400 hover:text-indigo-500 transition-colors"
-        >
-          <Plus size={16} />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setConfirmDelete(true)}
+            disabled={busy}
+            title="Delete task list"
+            className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+          >
+            <Trash2 size={14} />
+          </button>
+          <button
+            onClick={() => setAdding(true)}
+            title="Add task"
+            className="text-slate-400 hover:text-indigo-500 transition-colors"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Tasks */}
@@ -135,6 +255,17 @@ export function TaskListView({ taskList }: Props) {
             </button>
           </div>
         </div>
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          title="Delete task list"
+          message={`"${taskList.name}" and all ${tasks?.length ?? 0} of its tasks will be permanently deleted.`}
+          confirmLabel="Delete"
+          danger
+          onConfirm={confirmAndDelete}
+          onCancel={() => setConfirmDelete(false)}
+        />
       )}
     </div>
   );
