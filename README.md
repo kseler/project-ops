@@ -514,6 +514,7 @@ Completed:
 - [x] Organizations and memberships
 - [x] Multi-tenant authorization
 - [x] Realtime task synchronization with Socket.IO
+- [x] ADMIN and USER roles with corresponding abilities
 
 Next:
 - [ ] Database-backed dashboard analytics
