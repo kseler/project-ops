@@ -51,7 +51,7 @@ export const createProject = (data: {
 
 export const updateProject = (id: string, data: {
   name?: string;
-  description?: string;
+  description?: string | null;
   status?: string;
   dueDate?: string;
 }) => request<Project>(`/projects/${id}`, { method: 'PATCH', body: JSON.stringify(data) });

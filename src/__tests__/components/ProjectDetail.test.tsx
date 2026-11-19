@@ -118,6 +118,16 @@ describe('ProjectDetail', () => {
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
+  it('clearing the description sends null so the server clears it', async () => {
+    renderDetail();
+    await userEvent.click(screen.getByTitle('Edit project'));
+
+    await userEvent.clear(screen.getByPlaceholderText('Description (optional)'));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({ description: null }), expect.any(Object));
+  });
+
   it('calls mutate with the correct payload on save', async () => {
     renderDetail();
     await userEvent.click(screen.getByTitle('Edit project'));

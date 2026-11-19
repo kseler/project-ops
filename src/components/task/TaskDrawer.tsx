@@ -220,7 +220,7 @@ export function TaskDrawer() {
               onChange={(e) => setDescription(e.target.value)}
               onBlur={() => {
                 if (description !== (task.description ?? ''))
-                  save({ id: task.id, description: description || undefined });
+                  save({ id: task.id, description: description || null });
               }}
               rows={3}
               placeholder="Add description…"
@@ -275,7 +275,7 @@ export function TaskDrawer() {
                 onChange={(e) => setAssignee(e.target.value)}
                 onBlur={() => {
                   if (assignee !== (task.assignee ?? ''))
-                    save({ id: task.id, assignee: assignee || undefined });
+                    save({ id: task.id, assignee: assignee || null });
                 }}
                 placeholder="—"
                 className="flex-1 text-sm text-slate-700 focus:outline-none placeholder:text-slate-300 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-indigo-300 transition-colors py-0.5"
@@ -289,7 +289,8 @@ export function TaskDrawer() {
                 value={task.startDate ?? ''}
                 max={task.dueDate ?? undefined}
                 onChange={(e) => {
-                  const newStart = e.target.value || undefined;
+                  // null clears the date; undefined would leave it unchanged
+                  const newStart = e.target.value || null;
                   if (dueDateError) setDueDateError('');
                   save({ id: task.id, startDate: newStart });
                 }}
@@ -305,8 +306,8 @@ export function TaskDrawer() {
                   value={task.dueDate ?? ''}
                   min={task.startDate ?? undefined}
                   onChange={(e) => {
-                    const newDue = e.target.value || undefined;
-                    const errors = validateTask({ startDate: task.startDate ?? undefined, dueDate: newDue });
+                    const newDue = e.target.value || null;
+                    const errors = validateTask({ startDate: task.startDate ?? undefined, dueDate: newDue ?? undefined });
                     if (errors.dueDate) { setDueDateError(errors.dueDate); return; }
                     setDueDateError('');
                     save({ id: task.id, dueDate: newDue });

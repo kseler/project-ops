@@ -70,7 +70,8 @@ export function ProjectDetail() {
     updateProjectMutation.mutate(
       {
         name: form.name.trim(),
-        description: form.description.trim() || undefined,
+        // null clears the description; undefined would leave it unchanged
+        description: form.description.trim() || null,
         dueDate: form.dueDate
       },
       {
