@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskItem } from '@/components/task/TaskItem';
+import { taskKeys } from '@/queries/tasks';
 import type { Task } from '@/types';
 
 const mockMutate = vi.fn();
@@ -27,8 +28,7 @@ const baseTask: Task = {
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
-function renderTask(task: Task) {
-  const queryClient = new QueryClient();
+function renderTask(task: Task, queryClient = new QueryClient()) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/projects/p1']}>
@@ -42,7 +42,7 @@ function renderTask(task: Task) {
 
 describe('TaskItem', () => {
   beforeEach(() => {
-    mockMutate.mockClear();
+    mockMutate.mockReset();
   });
 
   it('renders the task name', () => {
@@ -67,6 +67,20 @@ describe('TaskItem', () => {
       expect.objectContaining({ id: 't1', status: 'in-progress' }),
       expect.any(Object),
     );
+  });
+
+  it('updates both the task-list and the project (Gantt) caches after saving', async () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(taskKeys.byTaskList('tl1'), [baseTask]);
+    queryClient.setQueryData(taskKeys.byProject('p1'), [baseTask]);
+    const saved = { ...baseTask, status: 'in-progress' as const };
+    mockMutate.mockImplementation((_patch, { onSuccess }) => onSuccess(saved));
+
+    renderTask(baseTask, queryClient);
+    await userEvent.click(screen.getByTitle('Mark as in-progress'));
+
+    expect(queryClient.getQueryData(taskKeys.byTaskList('tl1'))).toEqual([saved]);
+    expect(queryClient.getQueryData(taskKeys.byProject('p1'))).toEqual([saved]);
   });
 
   it('status button title reflects in-progress state', () => {

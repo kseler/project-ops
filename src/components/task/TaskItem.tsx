@@ -62,6 +62,7 @@ export function TaskItem({ task }: Props) {
     return updateTaskMutation.mutate(patch, {
       onSuccess: (updatedTask) => {
         updateTaskInCache(queryClient, taskKeys.byTaskList(updatedTask.taskListId), updatedTask);
+        if (projectId) updateTaskInCache(queryClient, taskKeys.byProject(projectId), updatedTask);
       },
     });
   };

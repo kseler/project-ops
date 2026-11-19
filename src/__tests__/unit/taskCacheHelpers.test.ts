@@ -44,6 +44,12 @@ describe('updateTaskInCache', () => {
     expect(result![1]).toEqual(tasks[1]);
   });
 
+  it('does not create a list that was never loaded', () => {
+    updateTaskInCache(queryClient, taskKeys.byProject('p1'), makeTask('t1', 'Name'));
+
+    expect(queryClient.getQueryData(taskKeys.byProject('p1'))).toBeUndefined();
+  });
+
   it('also updates the detail cache for the task', () => {
     const task = makeTask('t1', 'Old Name');
     queryClient.setQueryData(taskKeys.byTaskList('tl1'), [task]);
@@ -84,6 +90,12 @@ describe('removeTaskFromCache', () => {
 
     const result = queryClient.getQueryData<Task[]>(key);
     expect(result![0]).toEqual(tasks[1]);
+  });
+
+  it('does not create a list that was never loaded', () => {
+    removeTaskFromCache(queryClient, taskKeys.byProject('p1'), 't1');
+
+    expect(queryClient.getQueryData(taskKeys.byProject('p1'))).toBeUndefined();
   });
 
   it('is a no-op when the id does not exist in the list', () => {
