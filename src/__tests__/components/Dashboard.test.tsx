@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Dashboard } from '@/pages/Dashboard';
 import type { DashboardAnalytics, Project } from '@/types';
@@ -49,6 +49,10 @@ beforeAll(() => {
     unobserve() {}
     disconnect() {}
   });
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('Dashboard', () => {

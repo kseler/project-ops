@@ -6,14 +6,15 @@ export interface Task {
   id: string;
   taskListId: string;
   name: string;
-  description?: string;
+  // the API returns null for empty fields; send null to clear one, leave it out to keep it
+  description?: string | null;
   status: TaskStatus;
   priority: TaskPriority;
-  assignee?: string;
-  startDate?: string;
-  dueDate?: string;
+  assignee?: string | null;
+  startDate?: string | null;
+  dueDate?: string | null;
   createdAt: string;
-  completedAt?: string;
+  completedAt?: string | null;
 }
 
 export interface TaskList {
@@ -27,7 +28,7 @@ export interface TaskList {
 export interface Project {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   status: ProjectStatus;
   createdAt: string;
   dueDate: string;

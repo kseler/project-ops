@@ -93,13 +93,15 @@ describe('useProjectRealtime', () => {
     expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: taskKeys.byId('t1') });
   });
 
-  it('task:deleted invalidates byProject and byTaskList, and removes byId', () => {
+  it('task:deleted invalidates byProject, byTaskList and the task itself', () => {
     renderHook(() => useProjectRealtime('proj-1'), { wrapper });
     act(() => fireEvent('task:deleted', { taskId: 't1', taskListId: 'tl1', projectId: 'proj-1' }));
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskKeys.byProject('proj-1') });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskKeys.byTaskList('tl1') });
-    expect(removeSpy).toHaveBeenCalledWith({ queryKey: taskKeys.byId('t1') });
+    // invalidated rather than removed, so an open drawer refetches, gets 404 and closes
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskKeys.byId('t1') });
+    expect(removeSpy).not.toHaveBeenCalledWith({ queryKey: taskKeys.byId('t1') });
   });
 
   it.each(['task:created', 'task:updated', 'task:deleted', 'task-list:deleted'])(
@@ -153,5 +155,7 @@ describe('useProjectRealtime', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskListKeys.byProject('proj-1') });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskKeys.byProject('proj-1') });
     expect(removeSpy).toHaveBeenCalledWith({ queryKey: taskKeys.byTaskList('tl1') });
+    // its tasks are gone too, so open task details must refetch
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskKeys.details() });
   });
 });

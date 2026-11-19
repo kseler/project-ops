@@ -35,7 +35,7 @@ export function useUpdateProject(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { name?: string; description?: string; status?: string; dueDate?: string }) =>
+    mutationFn: (data: { name?: string; description?: string | null; status?: string; dueDate?: string }) =>
       updateProject(projectId, data),
     onSuccess: (updated) => {
       queryClient.setQueryData(projectKeys.byId(projectId), updated);

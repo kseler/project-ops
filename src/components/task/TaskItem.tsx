@@ -103,9 +103,10 @@ export function TaskItem({ task }: Props) {
 
   const saveDates = () => {
     setEditingDates(false);
-    const nextStart = startDate || undefined;
-    const nextDue = dueDate || undefined;
-    if (nextStart === task.startDate && nextDue === task.dueDate) return;
+    // null clears a date; undefined would leave it unchanged
+    const nextStart = startDate || null;
+    const nextDue = dueDate || null;
+    if (nextStart === (task.startDate ?? null) && nextDue === (task.dueDate ?? null)) return;
 
     updateTaskListItem({ id: task.id, startDate: nextStart, dueDate: nextDue });
   };

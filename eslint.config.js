@@ -11,7 +11,10 @@ export default [
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          // small tool configs that sit outside every tsconfig project
+          allowDefaultProject: ['server/vitest.config.ts', 'server/drizzle.config.ts'],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },

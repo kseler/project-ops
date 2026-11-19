@@ -43,6 +43,19 @@ function completedAtForStatus(status: (typeof taskStatusEnum.enumValues)[number]
   };
 }
 
+// same shape as the zod issue the schemas produce, so clients see one format
+const DUE_BEFORE_START_ISSUE = {
+  code: 'custom',
+  path: ['dueDate'],
+  message: 'dueDate must be on or after startDate',
+};
+
+// Postgres check_violation (23514) for the given constraint; drizzle wraps the driver error in `cause`
+function isCheckViolation(error: unknown, constraint: string) {
+  const pgError = (error as { cause?: { code?: string; constraint?: string } })?.cause;
+  return pgError?.code === '23514' && pgError.constraint === constraint;
+}
+
 export const taskIdParamsSchema = z.object({
   id: z.uuid(),
 });
@@ -285,6 +298,8 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
         id: tasks.id,
         taskListId: taskLists.id,
         projectId: projects.id,
+        startDate: tasks.startDate,
+        dueDate: tasks.dueDate,
       })
       .from(tasks)
       .innerJoin(taskLists, eq(tasks.taskListId, taskLists.id))
@@ -296,6 +311,14 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
 
     if (!existingTask) {
       return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // a patch may send only one of the dates, so validate the order on the resulting task
+    const startDate = parsedBody.data.startDate !== undefined ? parsedBody.data.startDate : existingTask.startDate;
+    const dueDate = parsedBody.data.dueDate !== undefined ? parsedBody.data.dueDate : existingTask.dueDate;
+
+    if (startDate && dueDate && dueDate < startDate) {
+      return res.status(400).json({ error: [DUE_BEFORE_START_ISSUE] });
     }
 
     const [updated] = await db
@@ -317,6 +340,11 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
 
     return res.json(updated);
   } catch (error) {
+    // a concurrent update can still slip past the check above; the DB constraint has the last word
+    if (isCheckViolation(error, 'tasks_due_date_after_start_date_check')) {
+      return res.status(400).json({ error: [DUE_BEFORE_START_ISSUE] });
+    }
+
     console.error('Failed to update task', error);
 
     return res.status(500).json({

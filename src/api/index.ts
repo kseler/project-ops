@@ -2,14 +2,35 @@ import type { DashboardAnalytics, Project, Task, TaskDependency, TaskList } from
 
 const BASE = '/api';
 
+// keeps the HTTP status so callers can tell e.g. "deleted" (404) from other failures
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+export const isNotFound = (error: unknown) => error instanceof ApiError && error.status === 404;
+
+// error bodies are { error: string }, { error: ZodIssue[] } or { message: string }
+function errorMessage(body: { error?: unknown; message?: unknown }) {
+  if (typeof body.error === 'string') return body.error;
+  if (Array.isArray(body.error) && typeof body.error[0]?.message === 'string') return body.error[0].message;
+  if (typeof body.message === 'string') return body.message;
+  return 'Request failed';
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { 'Content-Type': 'application/json' },
     ...init,
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? 'Request failed');
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    throw new ApiError(res.status, errorMessage(body));
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -30,7 +51,7 @@ export const createProject = (data: {
 
 export const updateProject = (id: string, data: {
   name?: string;
-  description?: string;
+  description?: string | null;
   status?: string;
   dueDate?: string;
 }) => request<Project>(`/projects/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
