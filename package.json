@@ -2,6 +2,7 @@
   "name": "project-ops",
   "private": true,
   "version": "0.0.0",
+  "packageManager": "pnpm@12.6.0",
   "type": "module",
   "scripts": {
     "test": "vitest run",
@@ -11,8 +12,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
     "preview": "vite preview",
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "cd server && npm run dev",
+    "dev": "concurrently \"pnpm dev:server\" \"pnpm dev:client\"",
+    "dev:server": "pnpm --dir server dev",
     "dev:client": "vite"
   },
   "dependencies": {
