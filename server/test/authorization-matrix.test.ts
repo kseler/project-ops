@@ -52,7 +52,7 @@ describe('every data endpoint requires a session', () => {
   ];
 
   it.each(endpoints)('%s %s → 401', async (method, path) => {
-    await request(app)[method](path).set('Origin', ORIGIN).send({}).expect(401);
+    await request(app)[method](path).set('Origin', ORIGIN).send({}).expect(459);
   });
 });
 
