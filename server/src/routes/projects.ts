@@ -23,7 +23,7 @@ function selectProjectsWithCounts(where: SQL | undefined) {
 
 export const createProjectSchema = z.object({
   name: z.string().trim().min(1),
-  description: z.string().trim().optional(),
+  description: z.string().trim().nullable().optional(),
   status: z.enum(projectStatusEnum.enumValues).optional(),
   dueDate: z.iso.date(),
 });
@@ -34,7 +34,7 @@ const projectIdParamsSchema = z.object({
 
 const updateProjectSchema = z.object({
   name: z.string().trim().min(1).optional(),
-  description: z.string().trim().optional(),
+  description: z.string().trim().nullable().optional(),
   status: z.enum(projectStatusEnum.enumValues).optional(),
   dueDate: z.iso.date().optional(),
 });
