@@ -1,4 +1,4 @@
-import type { Project, Task, TaskDependency, TaskList } from '../types';
+import type { DashboardAnalytics, Project, Task, TaskDependency, TaskList } from '../types';
 
 const BASE = '/api';
 
@@ -97,3 +97,11 @@ export const reverseTaskDependency = (id: string) =>
 
 export const getProjectTaskDependencies = (projectId: string) =>
   request<TaskDependency[]>(`/task-dependencies?projectId=${projectId}`);
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+// days are counted in the browser's time zone, so "today" matches the user's calendar
+export const getDashboard = () =>
+  request<DashboardAnalytics>(
+    `/dashboard?timeZone=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
+  );

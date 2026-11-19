@@ -6,6 +6,7 @@ import express from 'express';
 
 import { auth } from './auth/auth.js';
 import { requireAuth } from './middleware/require-auth.js';
+import dashboardRouter from './routes/dashboard.js';
 import projectsRouter from './routes/projects.js';
 import taskDependenciesRouter from './routes/task-dependencies.js';
 import tasklistsRouter from './routes/task-lists.js';
@@ -27,6 +28,7 @@ app.use('/api/projects', requireAuth, projectsRouter);
 app.use('/api/task-lists', requireAuth, tasklistsRouter);
 app.use('/api/tasks', requireAuth, tasksRouter);
 app.use('/api/task-dependencies', requireAuth, taskDependenciesRouter);
+app.use('/api/dashboard', requireAuth, dashboardRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

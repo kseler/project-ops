@@ -42,3 +42,20 @@ export interface TaskDependency {
   dependentTaskId: string;
   createdAt: string;
 }
+
+export interface DashboardAnalytics {
+  tasksByStatus: {
+    status: TaskStatus;
+    count: number;
+  }[];
+
+  openTasksByPriority: {
+    priority: TaskPriority;
+    count: number;
+  }[];
+
+  completedLast7Days: {
+    date: string; // YYYY-MM-DD, in the browser's time zone
+    count: number;
+  }[];
+}
