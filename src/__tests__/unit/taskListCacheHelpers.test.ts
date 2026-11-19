@@ -46,7 +46,7 @@ describe('removeTaskListFromCache', () => {
 
     const result = queryClient.getQueryData<TaskList[]>(taskListKeys.byProject('p1'))!;
     expect(result).toHaveLength(1);
-    expect(result[0].id).toBe('tl2');
+    expect(result[0].id).toBe('11111111111');
   });
 
   it('is a no-op when the id does not exist', () => {
