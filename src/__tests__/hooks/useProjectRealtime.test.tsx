@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { projectKeys } from '@/queries/projects';
+import { taskDependencyKeys } from '@/queries/taskDependencies';
 import { taskListKeys } from '@/queries/taskLists';
 import { taskKeys } from '@/queries/tasks';
 
@@ -111,6 +112,25 @@ describe('useProjectRealtime', () => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: projectKeys.all });
     },
   );
+
+  it.each(['taskdependency:created', 'taskdependency:updated', 'taskdependency:deleted'])(
+    '%s refreshes the dependencies of both tasks and the project (Gantt)',
+    (event) => {
+      renderHook(() => useProjectRealtime('proj-1'), { wrapper });
+      act(() => fireEvent(event, { dependencyId: 'd1', taskId: 't1', dependentTaskId: 't2', projectId: 'proj-1' }));
+
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskDependencyKeys.byTask('t1') });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskDependencyKeys.byTask('t2') });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskDependencyKeys.byProject('proj-1') });
+    },
+  );
+
+  it('task:deleted refreshes all dependency lists, since the cascade removed some', () => {
+    renderHook(() => useProjectRealtime('proj-1'), { wrapper });
+    act(() => fireEvent('task:deleted', { taskId: 't1', taskListId: 'tl1', projectId: 'proj-1' }));
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: taskDependencyKeys.all });
+  });
 
   it('tasklist:created invalidates taskListKeys.byProject', () => {
     renderHook(() => useProjectRealtime('proj-1'), { wrapper });
