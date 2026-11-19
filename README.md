@@ -1,5 +1,7 @@
 # ProjectOps
 
+[![CI](https://github.com/kseler/project-ops/actions/workflows/ci.yml/badge.svg)](https://github.com/kseler/project-ops/actions/workflows/ci.yml)
+
 A full-stack project and task management application built around complex, data-heavy workflows.
 
 ProjectOps started as a frontend-focused project and is being developed toward a production-style SaaS architecture. It currently combines persistent PostgreSQL storage, a typed Express API, runtime validation, authentication with multi-tenant organizations and roles, realtime collaboration, TanStack Query server-state management, task dependencies, and a custom interactive Gantt view.
@@ -477,9 +479,29 @@ This keeps the relational model normalized while supporting the Gantt's project-
 |---|---|---|
 | Unit | Vitest | Gantt geometry and dependency routing, validation, cache helpers, redirect safety, mouse auto-scroll |
 | Component | Vitest, Testing Library | dashboard, task drawer sections, settings by role, invitation flow, route guards |
-| API integration | Vitest, supertest | tenant isolation, roles and invitations, task dependencies and cycles, project aggregates, dashboard analytics, completion timestamps |
+| API integration | Vitest, supertest, socket.io-client | tenant isolation, the route authorization matrix, roles and invitations, realtime authorization and revocation, task dependencies and cycles, project aggregates, dashboard analytics, completion timestamps |
 
-API integration tests run against a separate test database that is truncated before each test.
+API integration tests run against a separate test database that is truncated before each test. Because of that, the server test setup refuses to start unless `DATABASE_URL` points at a database whose name ends in `_test`, so a missing test configuration can never fall back to the development database.
+
+---
+
+### Continuous Integration
+
+Every pull request and every push to `main` runs two GitHub Actions jobs:
+
+```text
+frontend                          backend
+  install (frozen lockfile)         PostgreSQL 18 service (empty)
+  lint                              install (frozen lockfile)
+  Vitest                            Drizzle migrations
+  TypeScript + Vite build           Vitest + integration tests
+                                    type-check tests
+                                    TypeScript build
+```
+
+The backend job starts from an empty database and builds the schema only from the committed migrations, so a migration history that no longer reproduces `schema.ts` fails CI even if every local database is fine.
+
+The jobs need no repository secrets: the database is a disposable service container and the auth secret is a throwaway value set in the workflow. The pnpm version comes from `packageManager` in `package.json` and the Node version from `.nvmrc`, so CI and local development use the same tools. A newer push to the same branch cancels the run testing the older commit, and the workflow only has read access to the repository.
 
 ---
 
@@ -503,7 +525,8 @@ API integration tests run against a separate test database that is truncated bef
 | Realtime | Socket.IO |
 | Email | Resend |
 | Testing | Vitest, Testing Library, supertest |
-| Package Manager | pnpm |
+| CI | GitHub Actions |
+| Package Manager | pnpm (workspace) |
 
 ---
 
@@ -544,6 +567,10 @@ New infrastructure is added when an actual product or architectural requirement 
 ```text
 project-ops/
 │
+├── .github/workflows/    # CI
+├── pnpm-workspace.yaml   # one workspace and lockfile for frontend and server
+├── .nvmrc                # Node version for local development and CI
+│
 ├── src/
 │   ├── api/              # HTTP API client
 │   ├── components/
@@ -568,6 +595,7 @@ project-ops/
     │   ├── db/           # schema, auth schema, seed
     │   ├── email/        # invitation emails
     │   ├── middleware/   # authentication and membership check
+    │   ├── realtime/     # Socket.IO server, project rooms, membership revocation
     │   ├── routes/
     │   │   ├── dashboard.ts
     │   │   ├── projects.ts
@@ -585,9 +613,9 @@ project-ops/
 
 ### Prerequisites
 
-- Node.js
-- pnpm
-- PostgreSQL
+- Node.js 26 (the version is in `.nvmrc`, so `nvm use` picks it up)
+- pnpm 12 (pinned in `package.json`; `corepack enable` installs the right version)
+- PostgreSQL 18
 
 ### 1. Clone the repository
 
@@ -601,6 +629,8 @@ cd project-ops
 ```bash
 pnpm install
 ```
+
+The repository is a pnpm workspace, so this one command installs both the frontend and the server from the single root lockfile.
 
 ### 3. Configure the server
 
@@ -673,7 +703,7 @@ Frontend unit and component tests:
 pnpm test
 ```
 
-API integration tests need their own database, because it is truncated before every test. Create a `project_ops_test` database, then copy the env file and point it at that database:
+API integration tests need their own database, because it is truncated before every test. Create a `project_ops_test` database (the name must end in `_test`, or the tests refuse to run), then copy the env file and point it at that database:
 
 ```bash
 cp server/.env.example server/.env.test
@@ -688,6 +718,8 @@ pnpm --dir server test
 ```
 
 Email variables are blanked for server tests, so they never send real emails.
+
+CI runs the same commands; there the database and environment come from the workflow instead of `.env.test`.
 
 ---
 
@@ -731,10 +763,9 @@ UPDATE member SET role = 'admin' WHERE role = 'owner';
 
 ## Current Development Focus
 
-With authentication, multi-tenancy, roles, realtime collaboration, task dependencies and real dashboard analytics in place, the focus moves to delivery and quality:
+With authentication, multi-tenancy, roles, realtime collaboration, task dependencies, real dashboard analytics and CI in place, the focus moves to delivery:
 
 - end-to-end tests for the main user flows
-- continuous integration running lint, type checks and both test suites
 - production deployment
 
 ---
@@ -764,10 +795,10 @@ Completed:
 - [x] Gantt dependency arrows
 - [x] Database-backed dashboard analytics
 - [x] Unit, component and API integration tests
+- [x] CI with GitHub Actions
 
 Next:
 - [ ] End-to-end tests
-- [ ] CI
 - [ ] Production deployment
 
 Later:

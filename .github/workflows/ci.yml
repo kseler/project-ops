@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# a newer push to the same branch or PR cancels the run testing the older commit
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # pnpm version comes from "packageManager" in package.json
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build (TypeScript + Vite)
+        run: pnpm build
+
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: project_ops_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # a disposable database and throwaway secret, so no repository secrets are needed
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/project_ops_test
+      BETTER_AUTH_SECRET: ci-test-secret
+      BETTER_AUTH_URL: http://localhost:3001
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # the database starts empty, so this proves the committed migrations rebuild the full schema
+      - name: Run migrations
+        run: pnpm --dir server db:migrate:test
+
+      - name: Test (Vitest + integration tests)
+        run: pnpm --dir server test
+
+      - name: Type-check tests
+        run: pnpm --dir server exec tsc -p test
+
+      - name: Build
+        run: pnpm --dir server build
