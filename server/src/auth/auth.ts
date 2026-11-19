@@ -8,6 +8,7 @@ import * as authSchema from '../db/auth-schema.js';
 import { invitation, member, session } from '../db/auth-schema.js';
 import { db } from '../db/index.js';
 import { sendInvitationEmail } from '../email/send-invitation-email.js';
+import { disconnectUserFromOrganization } from '../realtime/registry.js';
 
 const SELF_MANAGEMENT_PATHS = ['/organization/update-member-role', '/organization/remove-member'];
 
@@ -95,7 +96,8 @@ export const auth = betterAuth({
             });
           }
         },
-        // a removed member's open sessions must stop pointing at the organization
+        // a removed member's open sessions must stop pointing at the organization,
+        // and their live sockets must stop receiving its events
         afterRemoveMember: async ({ user, organization }) => {
           await db
             .update(session)
@@ -104,6 +106,7 @@ export const auth = betterAuth({
               eq(session.userId, user.id),
               eq(session.activeOrganizationId, organization.id),
             ));
+          await disconnectUserFromOrganization(user.id, organization.id);
         },
       },
     }),

@@ -28,6 +28,19 @@ export async function createUserWithOrg(email: string, orgName: string, slug: st
   return { agent, orgId: orgRes.body.id as string };
 }
 
+// a new session for an existing user, as a Cookie header for clients other than supertest
+// (e.g. socket.io-client); its active organization is the user's first membership
+export async function sessionCookie(email: string) {
+  const res = await request(app)
+    .post('/api/auth/sign-in/email')
+    .set('Origin', ORIGIN)
+    .send({ email, password: 'password1234' })
+    .expect(200);
+
+  const setCookie = res.headers['set-cookie'] as unknown as string[];
+  return setCookie.map((cookie) => cookie.split(';')[0]).join('; ');
+}
+
 export async function signUp(email: string, name = 'Test User') {
   const agent = request.agent(app);
 
