@@ -49,7 +49,8 @@ export function useProjectRealtime(projectId: string | undefined) {
     const handleDeleted = ({ taskId, taskListId, projectId: pid }: TaskEvent) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.byProject(pid) });
       queryClient.invalidateQueries({ queryKey: taskKeys.byTaskList(taskListId) });
-      queryClient.removeQueries({ queryKey: taskKeys.byId(taskId) });
+      // invalidate rather than remove: a drawer showing this task refetches, gets 404 and closes
+      queryClient.invalidateQueries({ queryKey: taskKeys.byId(taskId) });
       // the deleted task's dependencies were removed by the FK cascade
       queryClient.invalidateQueries({ queryKey: taskDependencyKeys.all });
       invalidateProjectCounts(pid);
@@ -67,6 +68,8 @@ export function useProjectRealtime(projectId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: taskListKeys.byProject(pid) });
       queryClient.invalidateQueries({ queryKey: taskKeys.byProject(pid) });
       queryClient.removeQueries({ queryKey: taskKeys.byTaskList(taskListId) });
+      // the list's tasks are gone too; an open drawer on one of them refetches and closes
+      queryClient.invalidateQueries({ queryKey: taskKeys.details() });
       queryClient.invalidateQueries({ queryKey: taskDependencyKeys.all });
       invalidateProjectCounts(pid);
     };

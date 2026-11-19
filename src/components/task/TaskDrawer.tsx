@@ -3,6 +3,7 @@ import { Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { isNotFound } from '@/api';
 import { validateTask } from '@/lib/validation';
 import { taskDependencyKeys } from '@/queries/taskDependencies';
 import { taskKeys, updateTaskInCache, useDeleteTask, useTask, useUpdateTask } from '@/queries/tasks';
@@ -137,6 +138,15 @@ export function TaskDrawer() {
     setVisible(false);
     setTimeout(() => navigate(`/projects/${projectId}`), DURATION);
   };
+
+  // the task was deleted while open (by someone else, or with its task list)
+  const taskGone = isNotFound(error);
+  useEffect(() => {
+    if (!taskGone) return;
+    addToast('This task was deleted');
+    close();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskGone]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };

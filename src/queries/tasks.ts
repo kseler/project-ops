@@ -1,13 +1,16 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { createTask, deleteTask, getTask, getTasksByProject, getTasksByTaskList, updateTask } from "@/api";
+import { createTask, deleteTask, getTask, getTasksByProject, getTasksByTaskList, isNotFound, updateTask } from "@/api";
 import type { Task } from "@/types";
 
 export const taskKeys = {
   all: ['tasks'] as const,
 
+  details: () =>
+    [...taskKeys.all, 'detail'] as const,
+
   byId: (id: string) =>
-    [...taskKeys.all, 'detail', id] as const,
+    [...taskKeys.details(), id] as const,
 
   byProject: (projectId: string) =>
     [...taskKeys.all, 'project', projectId] as const,
@@ -21,6 +24,8 @@ export function useTask(id: string) {
     queryKey: taskKeys.byId(id),
     queryFn: () => getTask(id),
     enabled: !!id,
+    // a deleted task stays deleted; retrying only delays telling the user
+    retry: (failureCount, error) => !isNotFound(error) && failureCount < 3,
   });
 }
 

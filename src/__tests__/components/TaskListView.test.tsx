@@ -138,6 +138,18 @@ describe('TaskListView', () => {
     expect(mockAddToast).toHaveBeenCalledWith('Task list deleted');
   });
 
+  it('on confirmed delete refreshes open task details, so a drawer on a deleted task closes', async () => {
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    mockDeleteMutate.mockImplementation((_id, { onSuccess }) => onSuccess());
+
+    renderList(queryClient);
+    await userEvent.click(screen.getByTitle('Delete task list'));
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: taskKeys.details() });
+  });
+
   it('shows an error toast when delete fails', async () => {
     mockDeleteMutate.mockImplementation((_id, { onError }) => onError(new Error('boom')));
 

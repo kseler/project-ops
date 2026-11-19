@@ -79,6 +79,8 @@ export function TaskListView({ taskList }: Props) {
       onSuccess: () => {
         removeTaskListFromCache(queryClient, taskList.projectId, taskList.id);
         queryClient.removeQueries({ queryKey: taskKeys.byTaskList(taskList.id) });
+        // a drawer open on one of the deleted tasks refetches, gets 404 and closes
+        queryClient.invalidateQueries({ queryKey: taskKeys.details() });
         queryClient.setQueryData<Task[]>(taskKeys.byProject(taskList.projectId), (current) =>
           current?.filter((task) => task.taskListId !== taskList.id),
         );
