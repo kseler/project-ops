@@ -43,6 +43,13 @@
       "when": 1791480432216,
       "tag": "0005_strange_stick",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795033295998,
+      "tag": "0006_daily_nekra",
+      "breakpoints": true
     }
   ]
 }
