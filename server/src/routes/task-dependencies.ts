@@ -207,7 +207,7 @@ router.post('/', async (req: Request, res: Response) => {
     });
 
     const io = req.app.get('io') as Server | undefined;
-    io?.to(`project:${task.projectId}`).emit('taskdependency:created', {
+    io?.to(`project:${task.projectId}`).emit('task-dependency:created', {
       dependencyId: dependency.id,
       taskId,
       dependentTaskId,
@@ -260,7 +260,7 @@ router.post('/:id/reverse', async (req: Request<{ id: string }>, res: Response) 
     });
 
     const io = req.app.get('io') as Server | undefined;
-    io?.to(`project:${existing.projectId}`).emit('taskdependency:updated', {
+    io?.to(`project:${existing.projectId}`).emit('task-dependency:updated', {
       dependencyId: reversed.id,
       taskId: reversed.taskId,
       dependentTaskId: reversed.dependentTaskId,
@@ -302,7 +302,7 @@ router.delete('/:id', async (req: Request<{ id: string }>, res: Response) => {
     await db.delete(taskDependencies).where(eq(taskDependencies.id, existing.id));
 
     const io = req.app.get('io') as Server | undefined;
-    io?.to(`project:${existing.projectId}`).emit('taskdependency:deleted', {
+    io?.to(`project:${existing.projectId}`).emit('task-dependency:deleted', {
       dependencyId: existing.id,
       taskId: existing.taskId,
       dependentTaskId: existing.dependentTaskId,

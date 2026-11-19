@@ -80,23 +80,23 @@ export function useProjectRealtime(projectId: string | undefined) {
     socket.on('task:updated', handleUpdated);
     socket.on('task:created', handleCreated);
     socket.on('task:deleted', handleDeleted);
-    socket.on('tasklist:created', handleTaskListCreated);
-    socket.on('tasklist:updated', handleTaskListUpdated);
-    socket.on('tasklist:deleted', handleTaskListDeleted);
-    socket.on('taskdependency:created', handleTaskDependencyChanged);
-    socket.on('taskdependency:updated', handleTaskDependencyChanged);
-    socket.on('taskdependency:deleted', handleTaskDependencyChanged);
+    socket.on('task-list:created', handleTaskListCreated);
+    socket.on('task-list:updated', handleTaskListUpdated);
+    socket.on('task-list:deleted', handleTaskListDeleted);
+    socket.on('task-dependency:created', handleTaskDependencyChanged);
+    socket.on('task-dependency:updated', handleTaskDependencyChanged);
+    socket.on('task-dependency:deleted', handleTaskDependencyChanged);
 
     return () => {
       socket.off('task:updated', handleUpdated);
       socket.off('task:created', handleCreated);
       socket.off('task:deleted', handleDeleted);
-      socket.off('tasklist:created', handleTaskListCreated);
-      socket.off('tasklist:updated', handleTaskListUpdated);
-      socket.off('tasklist:deleted', handleTaskListDeleted);
-      socket.off('taskdependency:created', handleTaskDependencyChanged);
-      socket.off('taskdependency:updated', handleTaskDependencyChanged);
-      socket.off('taskdependency:deleted', handleTaskDependencyChanged);
+      socket.off('task-list:created', handleTaskListCreated);
+      socket.off('task-list:updated', handleTaskListUpdated);
+      socket.off('task-list:deleted', handleTaskListDeleted);
+      socket.off('task-dependency:created', handleTaskDependencyChanged);
+      socket.off('task-dependency:updated', handleTaskDependencyChanged);
+      socket.off('task-dependency:deleted', handleTaskDependencyChanged);
     };
   }, [queryClient]);
 }
