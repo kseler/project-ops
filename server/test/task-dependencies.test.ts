@@ -232,6 +232,20 @@ describe('removing dependencies', () => {
     expect(await db.select().from(taskDependencies)).toHaveLength(1);
   });
 
+  it('deleting a task list removes the dependencies of its tasks, including ones to other lists', async () => {
+    const { agent, project, list, ids: [a, b] } = await setupProject(2);
+    const otherList = await createTaskList(agent, project.id, 'Other');
+    const c = await createTask(agent, otherList.id, 'Survivor');
+    await link(agent, a, b).expect(201);
+    await link(agent, b, c.id).expect(201);
+
+    await agent.delete(`/api/task-lists/${list.id}`).set('Origin', ORIGIN).expect(204);
+
+    expect(await db.select().from(taskDependencies)).toHaveLength(0);
+    const remaining = await agent.get(`/api/task-dependencies?taskId=${c.id}`).set('Origin', ORIGIN).expect(200);
+    expect(remaining.body).toEqual([]);
+  });
+
   it('deleting a task removes its dependencies', async () => {
     const { agent, ids: [a, b, c] } = await setupProject(3);
     await link(agent, a, b).expect(201);
