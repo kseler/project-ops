@@ -26,6 +26,20 @@ The project is also a place for me to explore architectural decisions deliberate
 
 ## Features
 
+### Dashboard
+
+An organization-wide overview built entirely from real data:
+
+| Widget | Source |
+|---|---|
+| Total projects, active projects, total tasks, completion rate | `GET /api/projects` |
+| Progress by project | `GET /api/projects` |
+| Tasks by status | `GET /api/dashboard` |
+| Open tasks by priority | `GET /api/dashboard` |
+| Tasks completed in the last 7 days | `GET /api/dashboard` |
+
+`/api/dashboard` only contains analytics that `/api/projects` cannot already provide. Charts show an empty state instead of rendering broken when an organization has no tasks yet.
+
 ### Projects
 
 Create and manage projects with:
@@ -267,6 +281,33 @@ GROUP BY projects.id
 
 The project list therefore never needs to load tasks just to show progress.
 
+The dashboard endpoint aggregates the same way: tasks grouped by status, open tasks grouped by priority, and completions grouped by calendar day. PostgreSQL returns only the groups that exist, so the server fills in missing statuses, priorities and days with zero, and the frontend always receives a complete, fixed-shape response.
+
+"Calendar day" depends on where the user is. A task finished at 00:30 in Zagreb is still the previous day in UTC. The frontend sends the browser's IANA time zone, and the server computes the seven dates in that zone and groups completions with `completed_at AT TIME ZONE ...`. The first of those dates is also the query's lower bound, so the window and the filled-in days can never disagree.
+
+---
+
+### Trustworthy Completion Timestamps
+
+Completion analytics are only as good as `completedAt`, so the server derives it from the status transition and never accepts it from the client:
+
+```text
+todo / in-progress → done    completedAt = now
+done → todo / in-progress    completedAt = null
+done → done                  unchanged
+status not in the update     unchanged
+```
+
+Editing the name of an already-finished task therefore doesn't make it look completed today.
+
+The transition is evaluated inside the `UPDATE` itself, against the row's current status:
+
+```sql
+completed_at = CASE WHEN status = 'done' THEN completed_at ELSE now() END
+```
+
+Reading the status first and deciding in application code would allow two concurrent requests to leave a task marked `done` with no completion time.
+
 ---
 
 ### Drizzle ORM
@@ -316,6 +357,7 @@ Validation covers:
 - project creation and updates
 - task-list creation and updates
 - task creation and updates
+- dashboard time zones
 - task dependencies
 - ISO calendar dates
 - task date relationships
@@ -411,6 +453,8 @@ POST   /api/task-dependencies
 POST   /api/task-dependencies/:id/reverse
 DELETE /api/task-dependencies/:id
 
+GET    /api/dashboard?timeZone=...
+
 *      /api/auth/*        Better Auth (sessions, organizations, members, invitations)
 ```
 
@@ -432,8 +476,8 @@ This keeps the relational model normalized while supporting the Gantt's project-
 | Layer | Tools | Covers |
 |---|---|---|
 | Unit | Vitest | Gantt geometry and dependency routing, validation, cache helpers, redirect safety, mouse auto-scroll |
-| Component | Vitest, Testing Library | task drawer sections, settings by role, invitation flow, route guards |
-| API integration | Vitest, supertest | tenant isolation, roles and invitations, task dependencies and cycles, project aggregates |
+| Component | Vitest, Testing Library | dashboard, task drawer sections, settings by role, invitation flow, route guards |
+| API integration | Vitest, supertest | tenant isolation, roles and invitations, task dependencies and cycles, project aggregates, dashboard analytics, completion timestamps |
 
 API integration tests run against a separate test database that is truncated before each test.
 
@@ -525,6 +569,7 @@ project-ops/
     │   ├── email/        # invitation emails
     │   ├── middleware/   # authentication and membership check
     │   ├── routes/
+    │   │   ├── dashboard.ts
     │   │   ├── projects.ts
     │   │   ├── task-lists.ts
     │   │   ├── tasks.ts
@@ -686,12 +731,11 @@ UPDATE member SET role = 'admin' WHERE role = 'owner';
 
 ## Current Development Focus
 
-With authentication, multi-tenancy, roles, realtime collaboration and task dependencies in place, the focus moves to delivery and quality:
+With authentication, multi-tenancy, roles, realtime collaboration, task dependencies and real dashboard analytics in place, the focus moves to delivery and quality:
 
 - end-to-end tests for the main user flows
 - continuous integration running lint, type checks and both test suites
 - production deployment
-- database-backed dashboard analytics
 
 ---
 
@@ -718,13 +762,13 @@ Completed:
 - [x] Task list renaming and deletion
 - [x] Task dependencies with cycle prevention
 - [x] Gantt dependency arrows
+- [x] Database-backed dashboard analytics
 - [x] Unit, component and API integration tests
 
 Next:
 - [ ] End-to-end tests
 - [ ] CI
 - [ ] Production deployment
-- [ ] Database-backed dashboard analytics
 
 Later:
 - [ ] Organization switcher for users in several organizations
