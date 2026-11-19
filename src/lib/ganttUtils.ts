@@ -113,20 +113,103 @@ export function applyDragOffset(task: Task, dragId: string, offsetDays: number):
  * Returns null if the task has no dates (nothing to render).
  * For single-date tasks (dueDate only) the bar spans one day.
  */
-export function getEntryStyle(
-  task: Task,
-  renderStart: Date,
-  rowIndex: number,
-): CSSProperties | null {
+export interface EntryRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+const ENTRY_INSET_X = 2;
+const ENTRY_INSET_Y = 5;
+
+// position of a task bar inside the timeline rows area; null when the task has no dates
+export function getEntryRect(task: Task, renderStart: Date, rowIndex: number): EntryRect | null {
   if (!task.startDate && !task.dueDate) return null;
 
   const start = task.startDate ? parseDate(task.startDate) : parseDate(task.dueDate!);
   const end = task.dueDate ? parseDate(task.dueDate) : start;
 
-  const left = daysBetween(renderStart, start) * SEGMENT_WIDTH + 2;
-  const width = Math.max(daysBetween(start, end) + 1, 1) * SEGMENT_WIDTH - 4;
-  const top = rowIndex * SEGMENT_HEIGHT + 5;
-  const height = SEGMENT_HEIGHT - 10;
+  return {
+    left: daysBetween(renderStart, start) * SEGMENT_WIDTH + ENTRY_INSET_X,
+    width: Math.max(daysBetween(start, end) + 1, 1) * SEGMENT_WIDTH - ENTRY_INSET_X * 2,
+    top: rowIndex * SEGMENT_HEIGHT + ENTRY_INSET_Y,
+    height: SEGMENT_HEIGHT - ENTRY_INSET_Y * 2,
+  };
+}
 
-  return { position: 'absolute', left, top, width, height };
+export function getEntryStyle(
+  task: Task,
+  renderStart: Date,
+  rowIndex: number,
+): CSSProperties | null {
+  const rect = getEntryRect(task, renderStart, rowIndex);
+  return rect && { position: 'absolute', ...rect };
+}
+
+// straight run out of the blocking bar, and into the dependent bar (long enough for the arrowhead)
+export const DEPENDENCY_EXIT = 10;
+export const DEPENDENCY_ENTRY = 16;
+export const DEPENDENCY_CORNER_RADIUS = 6;
+
+export type Point = [x: number, y: number];
+
+// Finish-to-start route: from the right edge of `from` (the blocking task) to the left edge of
+// `to` (the dependent task), as the corners of a right-angled line. When the dependent bar starts
+// too close to (or before) the end of the blocking bar, the line drops into the gap between rows
+// and comes back so it still enters the dependent bar from the left.
+export function getDependencyPoints(from: EntryRect, to: EntryRect): Point[] {
+  const x1 = from.left + from.width;
+  const y1 = from.top + from.height / 2;
+  const x2 = to.left;
+  const y2 = to.top + to.height / 2;
+
+  if (x2 - x1 >= DEPENDENCY_EXIT + DEPENDENCY_ENTRY) {
+    if (y1 === y2) return [[x1, y1], [x2, y2]];
+    const elbowX = x1 + DEPENDENCY_EXIT;
+    return [[x1, y1], [elbowX, y1], [elbowX, y2], [x2, y2]];
+  }
+
+  // the gap between rows next to the dependent bar: above it when going down, below it otherwise
+  const gapY = y2 > y1
+    ? to.top - ENTRY_INSET_Y
+    : to.top + to.height + ENTRY_INSET_Y;
+  const outX = x1 + DEPENDENCY_EXIT;
+  const inX = x2 - DEPENDENCY_ENTRY;
+
+  return [[x1, y1], [outX, y1], [outX, gapY], [inX, gapY], [inX, y2], [x2, y2]];
+}
+
+// Draws a right-angled line through `points` with each corner rounded by a quadratic curve.
+// The radius shrinks on short segments so neighbouring curves never overlap.
+export function toRoundedPath(points: Point[], radius: number): string {
+  const [first, ...rest] = points;
+  let d = `M ${first[0]} ${first[1]}`;
+
+  for (let i = 0; i < rest.length - 1; i++) {
+    const prev = points[i];
+    const corner = rest[i];
+    const next = rest[i + 1];
+
+    const r = Math.min(radius, distance(prev, corner) / 2, distance(corner, next) / 2);
+    const before = towards(corner, prev, r);
+    const after = towards(corner, next, r);
+
+    d += ` L ${before[0]} ${before[1]} Q ${corner[0]} ${corner[1]} ${after[0]} ${after[1]}`;
+  }
+
+  const last = rest[rest.length - 1];
+  return `${d} L ${last[0]} ${last[1]}`;
+}
+
+const distance = ([ax, ay]: Point, [bx, by]: Point) => Math.abs(bx - ax) + Math.abs(by - ay);
+
+// the point `length` px from `from` in the direction of `to` (segments are axis-aligned)
+const towards = ([fx, fy]: Point, [tx, ty]: Point, length: number): Point => [
+  fx + Math.sign(tx - fx) * length,
+  fy + Math.sign(ty - fy) * length,
+];
+
+export function getDependencyPath(from: EntryRect, to: EntryRect): string {
+  return toRoundedPath(getDependencyPoints(from, to), DEPENDENCY_CORNER_RADIUS);
 }
