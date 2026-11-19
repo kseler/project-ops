@@ -34,3 +34,11 @@ export interface Project {
   taskCount: number;
   completedCount: number;
 }
+
+// taskId blocks dependentTaskId (the dependent task waits on taskId)
+export interface TaskDependency {
+  id: string;
+  taskId: string;
+  dependentTaskId: string;
+  createdAt: string;
+}

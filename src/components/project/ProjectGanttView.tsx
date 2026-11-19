@@ -14,10 +14,12 @@ import {
   SEGMENT_HEIGHT,
   SEGMENT_WIDTH,
 } from '@/lib/ganttUtils';
+import { useProjectTaskDependencies } from '@/queries/taskDependencies';
 import { useTaskLists } from '@/queries/taskLists';
 import { taskKeys, updateTaskInCache, useTasksByProject, useUpdateTask } from '@/queries/tasks';
 import type { Task, TaskList } from '@/types';
 
+import { GanttDependencies, type TaskRowIndex } from './GanttDependencies';
 import { GanttTaskBar } from './GanttTaskBar';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -56,6 +58,7 @@ interface Props {
 export function ProjectGanttView({ projectId }: Props) {
   const { data: taskLists = [] } = useTaskLists(projectId);
   const { data: tasks = [] } = useTasksByProject(projectId);
+  const { data: dependencies = [] } = useProjectTaskDependencies(projectId);
 
   const updateTaskMutation = useUpdateTask();
 
@@ -100,6 +103,14 @@ export function ProjectGanttView({ projectId }: Props) {
   );
   const timelineWidth = totalDays * SEGMENT_WIDTH;
   const rowsHeight = rows.length * SEGMENT_HEIGHT;
+
+  const taskRows = useMemo<TaskRowIndex>(() => {
+    const index: TaskRowIndex = new Map();
+    rows.forEach((row, rowIndex) => {
+      if (row.kind === 'task') index.set(row.task.id, { task: row.task, rowIndex });
+    });
+    return index;
+  }, [rows]);
 
   const todayDayIndex = useMemo(
     () => daysBetween(renderStart, today),
@@ -298,7 +309,9 @@ export function ProjectGanttView({ projectId }: Props) {
                 <Link
                   to={`/projects/${projectId}/tasks/${row.task.id}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-sm text-slate-600 pl-3 truncate hover:underline hover:text-indigo-600 transition-colors"
+                  className={`text-sm text-slate-600 pl-3 truncate hover:underline hover:text-indigo-600 transition-colors ${
+                  row.task.status === 'done' ? 'line-through' : ''
+                }`}
                 >
                   {row.task.name}
                 </Link>
@@ -389,6 +402,14 @@ export function ProjectGanttView({ projectId }: Props) {
                 if (!style) return null;
                 return <GanttTaskBar key={row.task.id} task={row.task} style={style} projectId={projectId} />;
               })}
+
+              <GanttDependencies
+                dependencies={dependencies}
+                taskRows={taskRows}
+                renderStart={renderStart}
+                width={timelineWidth}
+                height={rowsHeight}
+              />
             </div>
           </div>
         </div>

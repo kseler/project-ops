@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -146,6 +147,41 @@ export const tasks = pgTable(
         OR ${table.dueDate} IS NULL
         OR ${table.dueDate} >= ${table.startDate}
       `,
+    ),
+  ],
+);
+// "task blocks dependent task" (the dependent task waits on the task). One row per pair.
+export const taskDependencies = pgTable(
+  'task_dependencies',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, {
+        onDelete: 'cascade',
+      }),
+
+    dependentTaskId: uuid('dependent_task_id')
+      .notNull()
+      .references(() => tasks.id, {
+        onDelete: 'cascade',
+      }),
+
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'date',
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('task_dependencies_pair_idx').on(table.taskId, table.dependentTaskId),
+    index('task_dependencies_dependent_task_id_idx').on(table.dependentTaskId),
+
+    check(
+      'task_dependencies_not_self_check',
+      sql`${table.taskId} <> ${table.dependentTaskId}`,
     ),
   ],
 );

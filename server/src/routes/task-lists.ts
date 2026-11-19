@@ -122,7 +122,7 @@ router.post('/', async (req: Request, res: Response) => {
       .returning();
 
     const io = req.app.get('io') as Server | undefined;
-    io?.to(`project:${projectId}`).emit('tasklist:created', {
+    io?.to(`project:${projectId}`).emit('task-list:created', {
       taskListId: taskList.id,
       projectId,
     });
@@ -170,7 +170,7 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
       .returning();
 
     const io = req.app.get('io') as Server | undefined;
-    io?.to(`project:${existing.projectId}`).emit('tasklist:updated', {
+    io?.to(`project:${existing.projectId}`).emit('task-list:updated', {
       taskListId: existing.id,
       projectId: existing.projectId,
     });
@@ -207,7 +207,7 @@ router.delete('/:id', async (req: Request<{ id: string }>, res: Response) => {
     await db.delete(taskLists).where(eq(taskLists.id, existing.id));
 
     const io = req.app.get('io') as Server | undefined;
-    io?.to(`project:${existing.projectId}`).emit('tasklist:deleted', {
+    io?.to(`project:${existing.projectId}`).emit('task-list:deleted', {
       taskListId: existing.id,
       projectId: existing.projectId,
     });

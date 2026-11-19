@@ -1,4 +1,4 @@
-import type { Project, Task, TaskList } from '../types';
+import type { Project, Task, TaskDependency, TaskList } from '../types';
 
 const BASE = '/api';
 
@@ -80,3 +80,20 @@ export const updateTask = (id: string, data: Partial<Task>) =>
 
 export const deleteTask = (id: string) =>
   request<void>(`/tasks/${id}`, { method: 'DELETE' });
+
+// ─── Task Dependencies ────────────────────────────────────────────────────────
+
+export const getTaskDependencies = (taskId: string) =>
+  request<TaskDependency[]>(`/task-dependencies?taskId=${taskId}`);
+
+export const createTaskDependency = (data: { taskId: string; dependentTaskId: string }) =>
+  request<TaskDependency>('/task-dependencies', { method: 'POST', body: JSON.stringify(data) });
+
+export const deleteTaskDependency = (id: string) =>
+  request<void>(`/task-dependencies/${id}`, { method: 'DELETE' });
+
+export const reverseTaskDependency = (id: string) =>
+  request<TaskDependency>(`/task-dependencies/${id}/reverse`, { method: 'POST' });
+
+export const getProjectTaskDependencies = (projectId: string) =>
+  request<TaskDependency[]>(`/task-dependencies?projectId=${projectId}`);

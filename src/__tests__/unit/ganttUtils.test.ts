@@ -4,11 +4,17 @@ import {
   addDays,
   applyDragOffset,
   daysBetween,
+  DEPENDENCY_ENTRY,
+  DEPENDENCY_EXIT,
+  getDependencyPath,
+  getDependencyPoints,
+  getEntryRect,
   getEntryStyle,
   parseDate,
   SEGMENT_HEIGHT,
   SEGMENT_WIDTH,
   toISO,
+  toRoundedPath,
 } from '@/lib/ganttUtils';
 import type { Task } from '@/types';
 
@@ -149,5 +155,111 @@ describe('getEntryStyle', () => {
     // startDate=Jun 1, dueDate=Jun 10 → 9 days span → (9+1) * SEGMENT_WIDTH - 4
     const style = getEntryStyle(baseTask, renderStart, 0);
     expect(style!.width).toBe(10 * SEGMENT_WIDTH - 4);
+  });
+});
+
+describe('getEntryRect', () => {
+  const renderStart = new Date(2026, 4, 30); // 30 May 2026
+
+  it('matches the bar style so arrows line up with bars', () => {
+    const rect = getEntryRect(baseTask, renderStart, 3)!;
+    const style = getEntryStyle(baseTask, renderStart, 3)!;
+
+    expect(style).toEqual({ position: 'absolute', ...rect });
+  });
+
+  it('places the bar inside its day cells and row', () => {
+    const rect = getEntryRect(baseTask, renderStart, 3)!;
+
+    expect(rect.left).toBe(2 * SEGMENT_WIDTH + 2);
+    expect(rect.width).toBe(10 * SEGMENT_WIDTH - 4);
+    expect(rect.top).toBe(3 * SEGMENT_HEIGHT + 5);
+    expect(rect.height).toBe(SEGMENT_HEIGHT - 10);
+  });
+
+  it('returns null for a task without dates', () => {
+    expect(getEntryRect({ ...baseTask, startDate: undefined, dueDate: undefined }, renderStart, 0)).toBeNull();
+  });
+});
+
+
+describe('getDependencyPoints', () => {
+  const bar = (left: number, row: number, width = 80) => ({
+    left,
+    width,
+    top: row * SEGMENT_HEIGHT + 5,
+    height: SEGMENT_HEIGHT - 10,
+  });
+  const cy = (row: number) => row * SEGMENT_HEIGHT + SEGMENT_HEIGHT / 2;
+
+  it('is a straight line between bars on the same row', () => {
+    expect(getDependencyPoints(bar(0, 2), bar(200, 2))).toEqual([[80, cy(2)], [200, cy(2)]]);
+  });
+
+  it('turns just after the blocker and runs into the dependent bar', () => {
+    expect(getDependencyPoints(bar(0, 0), bar(200, 3))).toEqual([
+      [80, cy(0)],
+      [80 + DEPENDENCY_EXIT, cy(0)],
+      [80 + DEPENDENCY_EXIT, cy(3)],
+      [200, cy(3)],
+    ]);
+  });
+
+  it('routes through the gap above the dependent row when it starts before the blocker ends', () => {
+    const rowTop = 3 * SEGMENT_HEIGHT;
+    expect(getDependencyPoints(bar(100, 0), bar(40, 3))).toEqual([
+      [180, cy(0)],
+      [180 + DEPENDENCY_EXIT, cy(0)],
+      [180 + DEPENDENCY_EXIT, rowTop],
+      [40 - DEPENDENCY_ENTRY, rowTop],
+      [40 - DEPENDENCY_ENTRY, cy(3)],
+      [40, cy(3)],
+    ]);
+  });
+
+  it('routes through the gap below the dependent row when going up', () => {
+    const rowBottom = 2 * SEGMENT_HEIGHT;
+    expect(getDependencyPoints(bar(100, 4), bar(40, 1))[2]).toEqual([180 + DEPENDENCY_EXIT, rowBottom]);
+  });
+
+  it('takes the detour when the bars are closer than exit + entry', () => {
+    const tooClose = 80 + DEPENDENCY_EXIT + DEPENDENCY_ENTRY - 1;
+    expect(getDependencyPoints(bar(0, 0), bar(tooClose, 2))).toHaveLength(6);
+  });
+
+  it('always leaves room for the arrowhead before the dependent bar', () => {
+    const cases = [[bar(0, 0), bar(300, 5)], [bar(300, 5), bar(0, 0)], [bar(0, 1), bar(10, 1)], [bar(0, 0), bar(110, 2)]];
+    for (const [from, to] of cases) {
+      const points = getDependencyPoints(from, to);
+      const [lastX] = points[points.length - 1];
+      const [beforeX] = points[points.length - 2];
+      expect(lastX).toBe(to.left);
+      expect(lastX - beforeX).toBeGreaterThanOrEqual(DEPENDENCY_ENTRY);
+    }
+  });
+});
+
+describe('toRoundedPath', () => {
+  it('draws a plain line when there are no corners', () => {
+    expect(toRoundedPath([[0, 10], [100, 10]], 6)).toBe('M 0 10 L 100 10');
+  });
+
+  it('rounds each corner with a curve of the given radius', () => {
+    expect(toRoundedPath([[0, 0], [20, 0], [20, 40], [60, 40]], 6)).toBe(
+      'M 0 0 L 14 0 Q 20 0 20 6 L 20 34 Q 20 40 26 40 L 60 40',
+    );
+  });
+
+  it('shrinks the radius on short segments so curves never overlap', () => {
+    // the vertical segment is only 4px, so each corner gets at most 2px
+    expect(toRoundedPath([[0, 0], [20, 0], [20, 4], [60, 4]], 6)).toBe(
+      'M 0 0 L 18 0 Q 20 0 20 2 L 20 2 Q 20 4 22 4 L 60 4',
+    );
+  });
+
+  it('is what getDependencyPath draws', () => {
+    const from = { left: 0, top: 5, width: 80, height: 26 };
+    const to = { left: 200, top: 77, width: 80, height: 26 };
+    expect(getDependencyPath(from, to)).toBe(toRoundedPath(getDependencyPoints(from, to), 6));
   });
 });

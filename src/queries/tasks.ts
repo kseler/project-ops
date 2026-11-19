@@ -73,8 +73,9 @@ export function updateTaskInCache(
   queryKey: readonly unknown[],
   updatedTask: Task,
 ) {
-  queryClient.setQueryData<Task[]>(queryKey, (tasks = []) =>
-    tasks.map((task) =>
+  // a list that was never loaded stays unloaded, instead of being created as an empty list
+  queryClient.setQueryData<Task[]>(queryKey, (tasks) =>
+    tasks?.map((task) =>
       task.id === updatedTask.id ? updatedTask : task,
     ),
   );
@@ -87,7 +88,7 @@ export function removeTaskFromCache(
   queryKey: readonly unknown[],
   taskId: string,
 ) {
-  queryClient.setQueryData<Task[]>(queryKey, (tasks = []) =>
-    tasks.filter((task) => task.id !== taskId),
+  queryClient.setQueryData<Task[]>(queryKey, (tasks) =>
+    tasks?.filter((task) => task.id !== taskId),
   );
 }
