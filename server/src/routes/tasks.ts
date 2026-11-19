@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns } from 'drizzle-orm';
+import { and, eq, getTableColumns, sql } from 'drizzle-orm';
 import { Request, Response,Router } from 'express';
 import type { Server } from 'socket.io';
 import z from 'zod';
@@ -27,6 +27,21 @@ export const getTasksQuerySchema = z
       message: 'Provide either taskListId or projectId',
     },
   );
+
+// completedAt follows the status transition:
+//   not done → done   set to now
+//   done → not done   cleared
+//   done → done       kept, so editing a finished task doesn't move its completion date
+//   status omitted    untouched
+// The SET expression reads the row's current status inside the UPDATE itself (not from an
+// earlier SELECT), so concurrent status changes can't leave a done task without completedAt.
+function completedAtForStatus(status: (typeof taskStatusEnum.enumValues)[number] | undefined) {
+  if (status === undefined) return {};
+  if (status !== 'done') return { completedAt: null };
+  return {
+    completedAt: sql`CASE WHEN ${tasks.status} = 'done' THEN ${tasks.completedAt} ELSE now() END`,
+  };
+}
 
 export const taskIdParamsSchema = z.object({
   id: z.uuid(),
@@ -287,6 +302,7 @@ router.patch('/:id', async (req: Request<{ id: string }>, res: Response) => {
       .update(tasks)
       .set({
         ...parsedBody.data,
+        ...completedAtForStatus(parsedBody.data.status),
         updatedAt: new Date(),
       })
       .where(eq(tasks.id, parsedParams.data.id))
