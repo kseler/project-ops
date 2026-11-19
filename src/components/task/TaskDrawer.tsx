@@ -1,15 +1,17 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useIsMutating, useQueryClient } from '@tanstack/react-query';
 import { Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { validateTask } from '@/lib/validation';
+import { taskDependencyKeys } from '@/queries/taskDependencies';
 import { taskKeys, updateTaskInCache, useDeleteTask, useTask, useUpdateTask } from '@/queries/tasks';
 import { removeTaskFromCache } from '@/queries/tasks';
 import { addToast } from '@/services/toast';
 import type { Task, TaskPriority, TaskStatus } from '@/types';
 
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { TaskDependencies } from './TaskDependencies';
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'todo', label: 'To do' },
@@ -75,7 +77,8 @@ export function TaskDrawer() {
   const updateTaskMutation = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();
 
-  const showSaving = useMinDurationFlag(updateTaskMutation.isPending);
+  const savingDependencies = useIsMutating({ mutationKey: taskDependencyKeys.all }) > 0;
+  const showSaving = useMinDurationFlag(updateTaskMutation.isPending || savingDependencies);
 
   // Local state for text fields (saved on blur)
   const [name, setName] = useState(task?.name ?? '');
@@ -102,6 +105,8 @@ export function TaskDrawer() {
     updateTaskMutation.mutate(patch, {
       onSuccess: (updated) => {
         updateTaskInCache(queryClient, taskKeys.byTaskList(updated.taskListId), updated);
+        // the Gantt reads the project-wide list
+        if (projectId) updateTaskInCache(queryClient, taskKeys.byProject(projectId), updated);
       },
     });
   };
@@ -312,6 +317,9 @@ export function TaskDrawer() {
               </div>
             </div>
 
+            <div className="h-px bg-slate-100" />
+
+            <TaskDependencies task={task} projectId={projectId!} />
           </div>
         )}
 
