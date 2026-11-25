@@ -5,6 +5,7 @@ import cors from 'cors';
 import express from 'express';
 
 import { auth } from './auth/auth.js';
+import { APP_URL } from './config.js';
 import { requireAuth } from './middleware/require-auth.js';
 import dashboardRouter from './routes/dashboard.js';
 import projectsRouter from './routes/projects.js';
@@ -16,7 +17,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: APP_URL,
     credentials: true,
   }),
 );

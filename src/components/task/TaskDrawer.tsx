@@ -158,6 +158,8 @@ export function TaskDrawer() {
   return (
     <>
       <div
+        role="dialog"
+        aria-label="Task details"
         className={`fixed top-0 right-0 h-full w-[520px] bg-white shadow-2xl z-50 flex flex-col
           transition-transform duration-[220ms] ease-out
           ${visible ? 'translate-x-0' : 'translate-x-full'}`}
@@ -189,6 +191,7 @@ export function TaskDrawer() {
             )}
             <button
               onClick={close}
+              aria-label="Close"
               className="text-slate-400 hover:text-slate-700 transition-colors p-1"
             >
               <X size={16} />
@@ -219,6 +222,7 @@ export function TaskDrawer() {
                     save({ id: task.id, name: name.trim() });
                 }}
                 rows={2}
+                aria-label="Task name"
                 className={`w-full text-lg font-semibold text-slate-900 resize-none focus:outline-none focus:ring-0 placeholder:text-slate-300 leading-snug ${nameError ? 'text-red-500' : ''}`}
                 placeholder="Task name"
               />
@@ -296,6 +300,7 @@ export function TaskDrawer() {
               <FieldLabel>Start</FieldLabel>
               <input
                 type="date"
+                aria-label="Start date"
                 value={task.startDate ?? ''}
                 max={task.dueDate ?? undefined}
                 onChange={(e) => {
@@ -313,6 +318,7 @@ export function TaskDrawer() {
               <div className="flex flex-col gap-0.5">
                 <input
                   type="date"
+                  aria-label="Due date"
                   value={task.dueDate ?? ''}
                   min={task.startDate ?? undefined}
                   onChange={(e) => {

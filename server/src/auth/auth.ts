@@ -4,6 +4,7 @@ import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/a
 import { organization } from 'better-auth/plugins';
 import { and, asc, eq } from 'drizzle-orm';
 
+import { APP_URL } from '../config.js';
 import * as authSchema from '../db/auth-schema.js';
 import { invitation, member, session } from '../db/auth-schema.js';
 import { db } from '../db/index.js';
@@ -18,7 +19,7 @@ export const auth = betterAuth({
     schema: authSchema,
   }),
 
-  trustedOrigins: ['http://localhost:5173'],
+  trustedOrigins: [APP_URL],
 
   emailAndPassword: {
     enabled: true,

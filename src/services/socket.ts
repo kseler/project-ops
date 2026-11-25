@@ -1,6 +1,8 @@
 import { io } from 'socket.io-client';
 
-export const socket = io('http://localhost:3001', {
+import { API_URL } from '@/lib/config';
+
+export const socket = io(API_URL, {
   autoConnect: false,
   withCredentials: true,
 });

@@ -106,37 +106,39 @@ export function TaskDependencies({ task, projectId }: Props) {
 
       {expanded && (
         <div className="mt-2 space-y-1">
-          {rows.map(({ dependency, direction, otherTask }) => (
-            <div key={dependency.id} className="group flex items-center gap-2 py-0.5">
-              <DependencyTypeMenu
-                value={direction}
-                onChange={() => reverse(dependency)}
-                disabled={busy}
-              />
-              {otherTask ? (
-                <Link
-                  to={`/projects/${projectId}/tasks/${otherTask.id}`}
-                  title={otherTask.name}
-                  className={`flex-1 min-w-0 truncate text-sm text-slate-700 hover:underline hover:text-indigo-600 ${
-                    otherTask.status === 'done' ? 'line-through' : ''
-                  }`}
+          <ul aria-label="Linked tasks" className="space-y-1">
+            {rows.map(({ dependency, direction, otherTask }) => (
+              <li key={dependency.id} className="group flex items-center gap-2 py-0.5">
+                <DependencyTypeMenu
+                  value={direction}
+                  onChange={() => reverse(dependency)}
+                  disabled={busy}
+                />
+                {otherTask ? (
+                  <Link
+                    to={`/projects/${projectId}/tasks/${otherTask.id}`}
+                    title={otherTask.name}
+                    className={`flex-1 min-w-0 truncate text-sm text-slate-700 hover:underline hover:text-indigo-600 ${
+                      otherTask.status === 'done' ? 'line-through' : ''
+                    }`}
+                  >
+                    {otherTask.name}
+                  </Link>
+                ) : (
+                  <span className="flex-1 text-sm text-slate-300">…</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => remove(dependency)}
+                  disabled={deleteDependencyMutation.isPending}
+                  title="Remove dependency"
+                  className="shrink-0 p-0.5 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all disabled:opacity-50"
                 >
-                  {otherTask.name}
-                </Link>
-              ) : (
-                <span className="flex-1 text-sm text-slate-300">…</span>
-              )}
-              <button
-                type="button"
-                onClick={() => remove(dependency)}
-                disabled={deleteDependencyMutation.isPending}
-                title="Remove dependency"
-                className="shrink-0 p-0.5 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all disabled:opacity-50"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
+                  <Trash2 size={13} />
+                </button>
+              </li>
+            ))}
+          </ul>
 
           <div className="flex items-center gap-2 py-0.5">
             <DependencyTypeMenu value={newDirection} onChange={setNewDirection} disabled={busy} />

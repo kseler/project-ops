@@ -87,10 +87,11 @@ export function SignUp() {
           className="bg-white border border-slate-200 rounded-lg px-6 py-7 space-y-4"
         >
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            <label htmlFor="sign-up-name" className="block text-xs font-medium text-slate-600 mb-1.5">
               Name
             </label>
             <input
+              id="sign-up-name"
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -102,10 +103,11 @@ export function SignUp() {
 
           {!joiningViaInvite && (
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+              <label htmlFor="sign-up-organization-name" className="block text-xs font-medium text-slate-600 mb-1.5">
                 Organization name
               </label>
               <input
+                id="sign-up-organization-name"
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
                 required
@@ -116,10 +118,11 @@ export function SignUp() {
           )}
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            <label htmlFor="sign-up-email" className="block text-xs font-medium text-slate-600 mb-1.5">
               Email
             </label>
             <input
+              id="sign-up-email"
               type="email"
               autoComplete="email"
               value={email}
@@ -131,10 +134,11 @@ export function SignUp() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            <label htmlFor="sign-up-password" className="block text-xs font-medium text-slate-600 mb-1.5">
               Password
             </label>
             <input
+              id="sign-up-password"
               type="password"
               autoComplete="new-password"
               value={password}
@@ -146,10 +150,11 @@ export function SignUp() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            <label htmlFor="sign-up-confirm-password" className="block text-xs font-medium text-slate-600 mb-1.5">
               Confirm password
             </label>
             <input
+              id="sign-up-confirm-password"
               type="password"
               autoComplete="new-password"
               value={confirmPassword}

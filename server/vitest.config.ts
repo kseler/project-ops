@@ -8,8 +8,9 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     // all test files share one database that is truncated before each test
     fileParallelism: false,
-    // app.ts loads server/.env too; blank these so tests never send real emails
+    // app.ts loads server/.env too; pin the origin the tests send and blank these so tests never send real emails
     env: {
+      APP_URL: 'http://localhost:5173',
       RESEND_API_KEY: '',
       EMAIL_FROM: '',
     },
