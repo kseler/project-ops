@@ -480,23 +480,26 @@ This keeps the relational model normalized while supporting the Gantt's project-
 | Unit | Vitest | Gantt geometry and dependency routing, validation, cache helpers, redirect safety, mouse auto-scroll |
 | Component | Vitest, Testing Library | dashboard, task drawer sections, settings by role, invitation flow, route guards |
 | API integration | Vitest, supertest, socket.io-client | tenant isolation, the route authorization matrix, roles and invitations, realtime authorization and revocation, task dependencies and cycles, project aggregates, dashboard analytics, completion timestamps |
+| End-to-end | Playwright (Chromium) | sign up, sign in and out, onboarding, redirects, project create and edit, task list rename and delete, tasks in the list and the drawer, dependencies and cycles in the drawer, Gantt bars and arrows |
 
 API integration tests run against a separate test database that is truncated before each test. Because of that, the server test setup refuses to start unless `DATABASE_URL` points at a database whose name ends in `_test`, so a missing test configuration can never fall back to the development database.
+
+End-to-end tests run the real app in a browser. Playwright starts its own API and Vite servers on separate ports (3101 and 5273) against their own `_test` database, and never attaches to running dev servers. Each test signs up a fresh user with their own organization and seeds what it needs through the API, so tests share no data and run in parallel without resetting the database.
 
 ---
 
 ### Continuous Integration
 
-Every pull request and every push to `main` runs two GitHub Actions jobs:
+Every pull request and every push to `main` runs three GitHub Actions jobs:
 
 ```text
-frontend                          backend
-  install (frozen lockfile)         PostgreSQL 18 service (empty)
-  lint                              install (frozen lockfile)
-  Vitest                            Drizzle migrations
-  TypeScript + Vite build           Vitest + integration tests
-                                    type-check tests
-                                    TypeScript build
+frontend                     backend                          e2e
+  install (frozen lockfile)    PostgreSQL 18 service (empty)    PostgreSQL 18 service (empty)
+  lint                         install (frozen lockfile)        install (frozen lockfile)
+  Vitest                       Drizzle migrations               Chromium
+  TypeScript + Vite build      Vitest + integration tests       Playwright (migrations, API, Vite)
+                               type-check tests                 report and traces on failure
+                               TypeScript build
 ```
 
 The backend job starts from an empty database and builds the schema only from the committed migrations, so a migration history that no longer reproduces `schema.ts` fails CI even if every local database is fine.
@@ -524,7 +527,7 @@ The jobs need no repository secrets: the database is a disposable service contai
 | Authentication | Better Auth (organizations, roles, invitations) |
 | Realtime | Socket.IO |
 | Email | Resend |
-| Testing | Vitest, Testing Library, supertest |
+| Testing | Vitest, Testing Library, supertest, Playwright |
 | CI | GitHub Actions |
 | Package Manager | pnpm (workspace) |
 
@@ -587,6 +590,9 @@ project-ops/
 │   ├── types/
 │   ├── __tests__/
 │   └── App.tsx
+│
+├── e2e/                  # Playwright specs, fixtures and API seeding helpers
+├── playwright.config.ts
 │
 └── server/
     ├── drizzle/          # Generated database migrations
@@ -721,6 +727,26 @@ Email variables are blanked for server tests, so they never send real emails.
 
 CI runs the same commands; there the database and environment come from the workflow instead of `.env.test`.
 
+End-to-end tests also need their own database. Create a `project_ops_e2e_test` database, separate from `project_ops_test` so the two suites can never wipe each other's data, and point `server/.env.e2e` at it. It only needs one line:
+
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/project_ops_e2e_test
+```
+
+Install the browser once:
+
+```bash
+pnpm exec playwright install chromium
+```
+
+Run the tests. Playwright migrates the database and starts the API and Vite itself, so the dev servers don't need to be running:
+
+```bash
+pnpm test:e2e
+```
+
+`pnpm test:e2e:ui` opens Playwright's UI mode for watching and debugging tests, and `pnpm exec playwright show-report` opens the last HTML report.
+
 ---
 
 ## Database Commands
@@ -763,9 +789,8 @@ UPDATE member SET role = 'admin' WHERE role = 'owner';
 
 ## Current Development Focus
 
-With authentication, multi-tenancy, roles, realtime collaboration, task dependencies, real dashboard analytics and CI in place, the focus moves to delivery:
+With authentication, multi-tenancy, roles, realtime collaboration, task dependencies, real dashboard analytics, CI and end-to-end tests in place, the focus moves to delivery:
 
-- end-to-end tests for the main user flows
 - production deployment
 
 ---
@@ -796,9 +821,9 @@ Completed:
 - [x] Database-backed dashboard analytics
 - [x] Unit, component and API integration tests
 - [x] CI with GitHub Actions
+- [x] End-to-end tests with Playwright
 
 Next:
-- [ ] End-to-end tests
 - [ ] Production deployment
 
 Later:
