@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
 
 interface Props {
   title: string;
@@ -17,6 +17,8 @@ export function ConfirmModal({
   onCancel,
   danger = false,
 }: Props) {
+  const titleId = useId();
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
     window.addEventListener('keydown', onKey);
@@ -30,9 +32,13 @@ export function ConfirmModal({
         className="fixed inset-0 bg-black/30 z-50"
       />
 
-      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-sm bg-white rounded-xl shadow-xl px-6 py-5 flex flex-col gap-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-sm bg-white rounded-xl shadow-xl px-6 py-5 flex flex-col gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+          <h2 id={titleId} className="text-sm font-semibold text-slate-900">{title}</h2>
           <p className="text-sm text-slate-500 mt-1">{message}</p>
         </div>
         <div className="flex justify-end gap-2">

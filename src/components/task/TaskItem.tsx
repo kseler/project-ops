@@ -193,6 +193,7 @@ export function TaskItem({ task }: Props) {
         <button
           onClick={handleDelete}
           disabled={busy}
+          title="Delete task"
           className="shrink-0 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
         >
           <Trash2 size={13} />

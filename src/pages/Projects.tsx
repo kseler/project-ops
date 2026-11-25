@@ -81,6 +81,7 @@ export function Projects() {
             <div>
               <input
                 type="date"
+                aria-label="Due date"
                 value={form.dueDate}
                 onChange={(e) => { setForm((f) => ({ ...f!, dueDate: e.target.value })); setFormErrors((fe) => ({ ...fe, dueDate: undefined })); }}
                 className={`text-sm px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-300 ${formErrors.dueDate ? 'border-red-300' : 'border-slate-200'}`}

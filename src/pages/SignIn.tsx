@@ -59,10 +59,11 @@ export function SignIn() {
           className="bg-white border border-slate-200 rounded-lg px-6 py-7 space-y-4"
         >
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            <label htmlFor="sign-in-email" className="block text-xs font-medium text-slate-600 mb-1.5">
               Email
             </label>
             <input
+              id="sign-in-email"
               type="email"
               autoComplete="email"
               autoFocus
@@ -75,10 +76,11 @@ export function SignIn() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            <label htmlFor="sign-in-password" className="block text-xs font-medium text-slate-600 mb-1.5">
               Password
             </label>
             <input
+              id="sign-in-password"
               type="password"
               autoComplete="current-password"
               value={password}

@@ -63,10 +63,11 @@ export function Onboarding() {
           className="bg-white border border-slate-200 rounded-lg px-6 py-7 space-y-4"
         >
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            <label htmlFor="onboarding-organization-name" className="block text-xs font-medium text-slate-600 mb-1.5">
               Organization name
             </label>
             <input
+              id="onboarding-organization-name"
               autoFocus
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}

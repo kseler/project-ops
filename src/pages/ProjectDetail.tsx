@@ -172,6 +172,7 @@ export function ProjectDetail() {
             <div>
               <input
                 type="date"
+                aria-label="Due date"
                 className={`text-sm border rounded-md px-2 py-1 outline-none transition-colors ${
                   errors.dueDate
                     ? 'border-red-400 text-red-600'

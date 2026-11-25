@@ -122,7 +122,10 @@ export function TaskListView({ taskList }: Props) {
   const busy = updateTaskListMutation.isPending || deleteTaskListMutation.isPending;
 
   return (
-    <div className={`bg-white border border-slate-200 rounded-lg overflow-hidden ${busy ? 'opacity-60' : ''}`}>
+    <section
+      aria-label={taskList.name}
+      className={`bg-white border border-slate-200 rounded-lg overflow-hidden ${busy ? 'opacity-60' : ''}`}
+    >
       {/* Header */}
       <div className="group flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100">
         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -269,6 +272,6 @@ export function TaskListView({ taskList }: Props) {
           onCancel={() => setConfirmDelete(false)}
         />
       )}
-    </div>
+    </section>
   );
 }
