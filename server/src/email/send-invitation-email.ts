@@ -1,13 +1,13 @@
 import { Resend } from 'resend';
 
+import { APP_URL } from '../config.js';
+
 interface InvitationEmail {
   email: string;
   invitationId: string;
   organizationName: string;
   inviterName: string;
 }
-
-const APP_URL = process.env.APP_URL ?? 'http://localhost:5173';
 
 const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);

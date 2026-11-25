@@ -6,6 +6,7 @@ import { Server } from 'socket.io';
 import z from 'zod';
 
 import { auth } from '../auth/auth.js';
+import { APP_URL } from '../config.js';
 import { db } from '../db/index.js';
 import { projects } from '../db/schema.js';
 import { isOrganizationMember } from '../middleware/require-auth.js';
@@ -15,7 +16,7 @@ type JoinResult = { ok: boolean; error?: string };
 
 const projectIdSchema = z.uuid();
 
-export function createRealtimeServer(httpServer: HttpServer, origin = 'http://localhost:5173') {
+export function createRealtimeServer(httpServer: HttpServer, origin = APP_URL) {
   const io = new Server(httpServer, {
     cors: {
       origin,
